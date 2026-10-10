@@ -15,11 +15,34 @@
         </div>
         <p class="welcome-sub">Ready to score 90+?</p>
         <div class="menu-buttons">
-            <button class="menu-btn" onclick="showScreen('chat-screen')">🚀 START STUDYING</button>
+            <button class="menu-btn" onclick="showScreen('tutor-select-screen')">🤖 CHOOSE YOUR TUTOR</button>
             <button class="menu-btn" onclick="document.getElementById('file-upload').click()">📚 UPLOAD LESSON FILE</button>
-            <button class="menu-btn" onclick="showScreen('voice-screen')">🎙️ VOICE TUTOR</button>
+            <button class="menu-btn" onclick="showScreen('chat-screen')">🚀 START STUDYING</button>
         </div>
         <input type="file" id="file-upload" accept=".txt" style="display:none;">
+    </div>
+
+    <!-- TUTOR SELECTION SCREEN -->
+    <div id="tutor-select-screen" class="screen hidden">
+        <header>
+            <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
+            <h1>Choose Your Tutor</h1>
+            <div style="width: 30px;"></div>
+        </header>
+        <div class="tutor-grid">
+            <div class="tutor-card" onclick="selectTutor('Nova', 'friendly and encouraging', '#87CEEB')">
+                <div class="tutor-icon" style="background:#87CEEB;">🤖</div>
+                <h3>Nova</h3><p>Friendly & Encouraging</p>
+            </div>
+            <div class="tutor-card" onclick="selectTutor('Atlas', 'strict and Socratic', '#FFD700')">
+                <div class="tutor-icon" style="background:#FFD700; color:#000;">🤖</div>
+                <h3>Atlas</h3><p>Strict & Socratic</p>
+            </div>
+            <div class="tutor-card" onclick="selectTutor('Pixel', 'funny and uses analogies', '#FF69B4')">
+                <div class="tutor-icon" style="background:#FF69B4;">🤖</div>
+                <h3>Pixel</h3><p>Funny & Relatable</p>
+            </div>
+        </div>
     </div>
 
     <div id="chat-screen" class="screen hidden">
@@ -30,6 +53,12 @@
         </header>
         <div class="xp-track"><div id="main-xp-bar" class="xp-bar-fill"></div></div>
         
+        <!-- 3D Robot Container -->
+        <div id="robot-container">
+            <canvas id="robot-canvas"></canvas>
+            <div id="robot-name-badge">Nova</div>
+        </div>
+
         <div id="chat-actions">
             <button id="quiz-btn" class="action-btn">🧠 Quiz Me</button>
             <button id="feynman-btn" class="action-btn">🧑‍🏫 Feynman Mode</button>
@@ -39,32 +68,12 @@
 
         <main id="chat-container"></main>
         <footer class="chat-footer">
-            <input type="text" id="user-input" placeholder="Type your answer or question..." autocomplete="off">
+            <input type="text" id="user-input" placeholder="Type your answer..." autocomplete="off">
             <button id="send-btn" class="round-btn">➤</button>
         </footer>
     </div>
 
-    <div id="voice-screen" class="screen hidden">
-        <header>
-            <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
-            <h1>Voice Tutor</h1>
-            <div style="width: 30px;"></div>
-        </header>
-        <main class="voice-main">
-            <div id="character-box" class="bounce-anim">
-                <div class="character-face">
-                    <div class="eye left"></div>
-                    <div class="eye right"></div>
-                    <div class="mouth"></div>
-                </div>
-            </div>
-            <p id="voice-status" class="voice-status">🎙️ Voice features coming soon...</p>
-        </main>
-        <footer class="voice-footer">
-            <button id="mic-btn" class="menu-btn mic-large">🎤 TAP TO SPEAK</button>
-        </footer>
-    </div>
-
+    <script src="three.min.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>

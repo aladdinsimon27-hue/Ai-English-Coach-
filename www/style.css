@@ -15,8 +15,15 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100v
 #menu-level { font-weight: bold; color: #2563eb; font-size: 1.2rem; }
 .xp-bar-container { background: #cbd5e1; height: 10px; border-radius: 5px; margin-top: 8px; overflow: hidden; }
 .menu-buttons { width: 100%; display: flex; flex-direction: column; gap: 15px; }
-.menu-btn { background: var(--primary-blue); color: white; border: none; padding: 18px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; text-align: center; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.1s; }
-.menu-btn:active { transform: scale(0.98); }
+.menu-btn { background: var(--primary-blue); color: white; border: none; padding: 18px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; text-align: center; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+/* TUTOR SELECT */
+.tutor-grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 20px; }
+.tutor-card { background: #1e293b; padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 15px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+.tutor-card:hover { border-color: var(--primary-blue); transform: scale(1.02); }
+.tutor-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
+.tutor-card h3 { color: white; margin-bottom: 4px; }
+.tutor-card p { color: #94a3b8; font-size: 0.85rem; }
 
 /* HEADER & XP */
 header { background-color: var(--chat-bg); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
@@ -26,13 +33,15 @@ header { background-color: var(--chat-bg); padding: 12px 15px; display: flex; ju
 .xp-track { width: 100%; height: 4px; background: #1e293b; }
 .xp-bar-fill { height: 100%; width: 0%; background: var(--xp-green); transition: width 0.5s ease-out; }
 
-/* ACTIONS */
-#chat-actions { padding: 10px 15px; background: #1e293b; display: flex; gap: 8px; border-bottom: 1px solid #334155; overflow-x: auto; }
-.action-btn { background: #475569; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
-.action-btn:hover { background: #64748b; }
-#lesson-status { font-size: 0.7rem; color: #94a3b8; padding: 0 15px 8px 15px; background: #1e293b; text-align: right; }
+/* 3D ROBOT CANVAS */
+#robot-container { width: 100%; height: 180px; background: #000; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; border-bottom: 1px solid #334155; }
+#robot-canvas { width: 100%; height: 100%; }
+#robot-name-badge { position: absolute; bottom: 5px; right: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; }
 
 /* CHAT */
+#chat-actions { padding: 10px 15px; background: #1e293b; display: flex; gap: 8px; border-bottom: 1px solid #334155; overflow-x: auto; }
+.action-btn { background: #475569; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+#lesson-status { font-size: 0.7rem; color: #94a3b8; padding: 0 15px 8px 15px; background: #1e293b; text-align: right; }
 #chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
 .message { max-width: 85%; padding: 12px 16px; border-radius: 16px; line-height: 1.4; font-size: 0.95rem; word-wrap: break-word; white-space: pre-wrap; animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -41,17 +50,3 @@ header { background-color: var(--chat-bg); padding: 12px 15px; display: flex; ju
 .chat-footer { padding: 15px; background-color: var(--chat-bg); display: flex; gap: 10px; border-top: 1px solid #334155; align-items: center; }
 #user-input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: var(--bg-color); color: white; outline: none; min-width: 0; }
 .round-btn { background: var(--user-msg); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; }
-
-/* VOICE & ANIMATIONS */
-.voice-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background: #000; }
-#character-box { width: 100%; aspect-ratio: 1; background: #1a1a1a; border-radius: 20px; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; overflow: hidden; }
-.character-face { width: 200px; height: 120px; background: #87CEEB; border-radius: 50%; position: relative; display: flex; justify-content: center; align-items: center; }
-.eye { width: 40px; height: 50px; background: #fffff0; border-radius: 50%; position: absolute; top: 30px; }
-.eye.left { left: 30px; } .eye.right { right: 30px; }
-.mouth { width: 60px; height: 15px; background: #4B0082; border-radius: 50%; position: absolute; bottom: 15px; }
-.voice-status { color: #aaa; font-size: 1rem; text-align: center; margin-bottom: 20px; }
-.voice-footer { padding: 20px; background: var(--bg-color); }
-.mic-large { background: var(--xp-green); font-size: 1.2rem; padding: 20px; width: 100%; }
-
-.bounce-anim { animation: bounce 2s infinite; }
-@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
