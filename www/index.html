@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Personal Tutor</title>
+    <title>AI Personal Tutor 90+</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="main-menu" class="screen">
-        <h1 class="welcome-title">Welcome back! 👋</h1>
-        <p class="welcome-sub">Your current level:<br><strong>Complete Beginner</strong></p>
-        <div class="menu-buttons">
-            <button class="menu-btn" onclick="showScreen('chat-screen')">💬 CHAT WITH TUTOR</button>
-            <button class="menu-btn" onclick="document.getElementById('file-upload').click()">📚 UPLOAD LESSON FILE</button>
-            <button class="menu-btn" onclick="showScreen('voice-screen')">🎙️ VOICE TUTOR (BETA)</button>
-            <button class="menu-btn" onclick="alert('Coming soon!')">📊 MY PROGRESS</button>
+        <h1 class="welcome-title">Welcome Back! 👋</h1>
+        <div class="level-card">
+            <span id="menu-level">Level 1</span>
+            <div class="xp-bar-container"><div id="menu-xp-bar" class="xp-bar-fill"></div></div>
         </div>
-        <!-- Hidden File Input -->
+        <p class="welcome-sub">Ready to score 90+?</p>
+        <div class="menu-buttons">
+            <button class="menu-btn" onclick="showScreen('chat-screen')">🚀 START STUDYING</button>
+            <button class="menu-btn" onclick="document.getElementById('file-upload').click()">📚 UPLOAD LESSON FILE</button>
+            <button class="menu-btn" onclick="showScreen('voice-screen')">🎙️ VOICE TUTOR</button>
+        </div>
         <input type="file" id="file-upload" accept=".txt" style="display:none;">
     </div>
 
@@ -24,15 +26,20 @@
         <header>
             <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
             <div id="study-timer">⏱️ 00:00:00</div>
-            <button id="clear-memory-chat" class="reset-btn">Reset</button>
+            <div class="header-xp">Lvl <span id="header-level">1</span></div>
         </header>
+        <div class="xp-track"><div id="main-xp-bar" class="xp-bar-fill"></div></div>
+        
         <div id="chat-actions">
-            <button id="make-notes-btn" class="action-btn">📝 Make Notes</button>
-            <span id="lesson-status">No file uploaded</span>
+            <button id="quiz-btn" class="action-btn">🧠 Quiz Me</button>
+            <button id="feynman-btn" class="action-btn">🧑‍🏫 Feynman Mode</button>
+            <button id="make-notes-btn" class="action-btn">📝 Notes</button>
         </div>
+        <div id="lesson-status">No file uploaded</div>
+
         <main id="chat-container"></main>
         <footer class="chat-footer">
-            <input type="text" id="user-input" placeholder="Ask your tutor anything..." autocomplete="off">
+            <input type="text" id="user-input" placeholder="Type your answer or question..." autocomplete="off">
             <button id="send-btn" class="round-btn">➤</button>
         </footer>
     </div>
@@ -40,11 +47,11 @@
     <div id="voice-screen" class="screen hidden">
         <header>
             <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
-            <h1>AI Voice Tutor</h1>
+            <h1>Voice Tutor</h1>
             <div style="width: 30px;"></div>
         </header>
         <main class="voice-main">
-            <div id="character-box">
+            <div id="character-box" class="bounce-anim">
                 <div class="character-face">
                     <div class="eye left"></div>
                     <div class="eye right"></div>
