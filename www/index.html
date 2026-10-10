@@ -11,26 +11,24 @@
         <h1 class="welcome-title">Welcome back! 👋</h1>
         <p class="welcome-sub">Your current level:<br><strong>Complete Beginner</strong></p>
         <div class="menu-buttons">
-            <button class="menu-btn" onclick="showScreen('voice-screen')">🎙️ SPEAK WITH TUTOR</button>
             <button class="menu-btn" onclick="showScreen('chat-screen')">💬 CHAT WITH TUTOR</button>
-            <button class="menu-btn" onclick="alert('Coming soon!')">📚 UPLOAD LESSON FILE</button>
+            <button class="menu-btn" onclick="document.getElementById('file-upload').click()">📚 UPLOAD LESSON FILE</button>
+            <button class="menu-btn" onclick="showScreen('voice-screen')">🎙️ VOICE TUTOR (BETA)</button>
             <button class="menu-btn" onclick="alert('Coming soon!')">📊 MY PROGRESS</button>
         </div>
+        <!-- Hidden File Input -->
+        <input type="file" id="file-upload" accept=".txt" style="display:none;">
     </div>
+
     <div id="chat-screen" class="screen hidden">
         <header>
             <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
-            <select id="subject-selector">
-                <option value="General Knowledge">🌍 General</option>
-                <option value="English Language">🇬🇧 English</option>
-                <option value="Mathematics">📐 Math</option>
-                <option value="Science">🔬 Science</option>
-                <option value="History">🏛️ History</option>
-            </select>
+            <div id="study-timer">⏱️ 00:00:00</div>
             <button id="clear-memory-chat" class="reset-btn">Reset</button>
         </header>
         <div id="chat-actions">
             <button id="make-notes-btn" class="action-btn">📝 Make Notes</button>
+            <span id="lesson-status">No file uploaded</span>
         </div>
         <main id="chat-container"></main>
         <footer class="chat-footer">
@@ -38,6 +36,7 @@
             <button id="send-btn" class="round-btn">➤</button>
         </footer>
     </div>
+
     <div id="voice-screen" class="screen hidden">
         <header>
             <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
@@ -52,12 +51,13 @@
                     <div class="mouth"></div>
                 </div>
             </div>
-            <p id="voice-status" class="voice-status">🎙️ Preparing voice conversation...</p>
+            <p id="voice-status" class="voice-status">🎙️ Voice features coming soon...</p>
         </main>
         <footer class="voice-footer">
             <button id="mic-btn" class="menu-btn mic-large">🎤 TAP TO SPEAK</button>
         </footer>
     </div>
+
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
