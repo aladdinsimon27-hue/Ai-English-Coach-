@@ -3,44 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI English Coach</title>
+    <title>AI Personal Tutor</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <!-- SCREEN 1: MAIN MENU -->
     <div id="main-menu" class="screen">
         <h1 class="welcome-title">Welcome back! 👋</h1>
         <p class="welcome-sub">Your current level:<br><strong>Complete Beginner</strong></p>
         <div class="menu-buttons">
-            <button class="menu-btn" onclick="showScreen('voice-screen')">🎙️ SPEAK WITH AI</button>
-            <button class="menu-btn" onclick="showScreen('chat-screen')">💬 CHAT WITH AI</button>
-            <button class="menu-btn" onclick="alert('Coming soon!')">📚 LEARN ENGLISH</button>
+            <button class="menu-btn" onclick="showScreen('voice-screen')">🎙️ SPEAK WITH TUTOR</button>
+            <button class="menu-btn" onclick="showScreen('chat-screen')">💬 CHAT WITH TUTOR</button>
+            <button class="menu-btn" onclick="alert('Coming soon!')">📚 UPLOAD LESSON FILE</button>
             <button class="menu-btn" onclick="alert('Coming soon!')">📊 MY PROGRESS</button>
-            <button class="menu-btn" onclick="alert('Model: openai/gpt-oss-120b')">🔍 CHECK GROQ MODELS</button>
         </div>
     </div>
-
-    <!-- SCREEN 2: TEXT CHAT -->
     <div id="chat-screen" class="screen hidden">
         <header>
             <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
-            <h1>🇬🇧 AI English Teacher</h1>
+            <select id="subject-selector">
+                <option value="General Knowledge">🌍 General</option>
+                <option value="English Language">🇬🇧 English</option>
+                <option value="Mathematics">📐 Math</option>
+                <option value="Science">🔬 Science</option>
+                <option value="History">🏛️ History</option>
+            </select>
             <button id="clear-memory-chat" class="reset-btn">Reset</button>
         </header>
+        <div id="chat-actions">
+            <button id="make-notes-btn" class="action-btn">📝 Make Notes</button>
+        </div>
         <main id="chat-container"></main>
         <footer class="chat-footer">
-            <input type="text" id="user-input" placeholder="Message AI English Teacher..." autocomplete="off">
+            <input type="text" id="user-input" placeholder="Ask your tutor anything..." autocomplete="off">
             <button id="send-btn" class="round-btn">➤</button>
         </footer>
     </div>
-
-    <!-- SCREEN 3: VOICE CONVERSATION -->
     <div id="voice-screen" class="screen hidden">
         <header>
             <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
-            <h1>AI English Conversation</h1>
-            <div style="width: 30px;"></div> <!-- Spacer -->
+            <h1>AI Voice Tutor</h1>
+            <div style="width: 30px;"></div>
         </header>
         <main class="voice-main">
             <div id="character-box">
@@ -53,11 +55,9 @@
             <p id="voice-status" class="voice-status">🎙️ Preparing voice conversation...</p>
         </main>
         <footer class="voice-footer">
-            <button id="choose-voice-btn" class="menu-btn" style="margin-bottom: 10px;">🎙️ CHOOSE VOICE</button>
             <button id="mic-btn" class="menu-btn mic-large">🎤 TAP TO SPEAK</button>
         </footer>
     </div>
-
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>

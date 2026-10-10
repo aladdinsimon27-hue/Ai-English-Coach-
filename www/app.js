@@ -1,119 +1,20 @@
-// AI English Coach - Architecture Compliant Logic
+// AI Personal Tutor - Multi-Subject & Note Maker
 
 const GROQ_API_KEY = window.APP_CONFIG.GROQ_API_KEY;
 const chatContainer = document.getElementById('chat-container');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
-const micBtn = document.getElementById('mic-btn');
-const voiceStatus = document.getElementById('voice-status');
-const characterFace = document.querySelector('.character-face');
-const chooseVoiceBtn = document.getElementById('choose-voice-btn');
+const subjectSelector = document.getElementById('subject-selector');
+const makeNotesBtn = document.getElementById('make-notes-btn');
 
-let chatHistory = JSON.parse(localStorage.getItem('englishCoachHistory')) || [];
-let recognition;
-let isListening = false;
+let chatHistory = JSON.parse(localStorage.getItem('tutorHistory')) || [];
+let isProcessing = false;
 
-// --- THE STATE CONTROLLER (Fixes the spam bug) ---
-let appState = 'IDLE'; // IDLE, LISTENING, THINKING, SPEAKING
-
-function setState(newState) {
-    appState = newState;
-    console.log("State changed to: " + appState);
-
-    // Lock/Unlock controls based on state
-    if (appState === 'THINKING' || appState === 'SPEAKING') {
-        sendBtn.disabled = true;
-        micBtn.disabled = true;
-        sendBtn.style.opacity = '0.5';
-        micBtn.style.opacity = '0.5';
-    } else {
-        sendBtn.disabled = false;
-        micBtn.disabled = false;
-        sendBtn.style.opacity = '1';
-        micBtn.style.opacity = '1';
-    }
-
-    // Update UI status
-    if (appState === 'THINKING') voiceStatus.textContent = '🧠 Thinking...';
-    if (appState === 'SPEAKING') voiceStatus.textContent = '🔊 AI is speaking...';
-    if (appState === 'LISTENING') voiceStatus.textContent = '🎙️ Listening... Speak now.';
-    if (appState === 'IDLE') voiceStatus.textContent = 'Your turn...';
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    document.getElementById(screenId).classList.remove('hidden');
 }
 
-// --- SPEECH RECOGNITION (STT) ---
-if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-        isListening = true;
-        setState('LISTENING');
-    };
-
-    recognition.onresult = (event) => {
-        userInput.value = event.results[0][0].transcript;
-        handleSend();
-    };
-
-    recognition.onerror = (event) => {
-        setState('IDLE');
-    };
-
-    recognition.onend = () => {
-        isListening = false;
-        if (appState === 'LISTENING') setState('IDLE');
-    };
-}
-
-// --- NATURAL VOICE (GROQ TTS) ---
-async function playNaturalVoice(text) {
-    setState('SPEAKING');
-    characterFace.classList.add('speaking');
-
-    try {
-        // Request high-quality audio from Groq
-        const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${GROQ_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'canopylabs/orpheus-v1-english',
-                input: text,
-                voice: 'tara', // Natural female voice. Can be changed to 'leah', 'jess', 'leo', 'dan'
-                response_format: 'wav'
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error("TTS API failed");
-        }
-
-        // Convert the response to an audio file and play it
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-
-        audio.onended = () => {
-            characterFace.classList.remove('speaking');
-            setState('IDLE');
-        };
-
-        audio.play();
-
-    } catch (error) {
-        console.error("TTS Error:", error);
-        voiceStatus.textContent = 'Voice error, reading text.';
-        characterFace.classList.remove('speaking');
-        setState('IDLE');
-    }
-}
-
-// --- UI & MEMORY ---
 function renderHistory() {
     chatContainer.innerHTML = '';
     chatHistory.forEach(msg => addMessageToUI(msg.text, msg.sender));
@@ -128,31 +29,39 @@ function addMessageToUI(text, sender) {
 }
 
 function saveMemory() {
-    localStorage.setItem('englishCoachHistory', JSON.stringify(chatHistory));
+    localStorage.setItem('tutorHistory', JSON.stringify(chatHistory));
 }
 
-// --- API CALL (LLM) ---
-async function handleSend() {
-    if (appState === 'THINKING' || appState === 'SPEAKING') return; // Double safety
-
-    const text = userInput.value.trim();
+async function handleSend(customPrompt = null) {
+    if (isProcessing) return;
+    const text = customPrompt || userInput.value.trim();
     if (!text) return;
 
-    setState('THINKING');
-    addMessageToUI(text, 'user');
-    chatHistory.push({ text: text, sender: 'user' });
-    userInput.value = '';
-    saveMemory();
+    isProcessing = true;
+    if (!customPrompt) {
+        addMessageToUI(text, 'user');
+        chatHistory.push({ text: text, sender: 'user' });
+        userInput.value = '';
+        saveMemory();
+    }
 
     const thinkingMsg = document.createElement('div');
     thinkingMsg.classList.add('message', 'ai-message');
-    thinkingMsg.textContent = '...';
+    thinkingMsg.textContent = 'Thinking...';
     thinkingMsg.id = 'thinking-indicator';
     chatContainer.appendChild(thinkingMsg);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 
+    const subject = subjectSelector.value;
+    
+    let systemPrompt = `You are an expert, patient, and highly intelligent ${subject} tutor. Your goal is to teach the student deeply, not just give answers. Use simple analogies, step-by-step explanations, and encourage critical thinking.`;
+    
+    if (customPrompt && customPrompt.includes("Make Notes")) {
+        systemPrompt = `You are an expert note-taker. Based on the conversation history, create a structured, easy-to-study set of notes for a ${subject} student. Use headings, bullet points, and a summary. Format it beautifully with text only.`;
+    }
+
     const apiMessages = [
-        { role: 'system', content: 'You are an expert English AI Coach. Correct grammar mistakes gently, explain new vocabulary, and encourage the user to speak naturally. Keep responses concise and conversational. Do not use markdown formatting.' },
+        { role: 'system', content: systemPrompt },
         ...chatHistory.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }))
     ];
 
@@ -164,10 +73,10 @@ async function handleSend() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'openai/gpt-oss-120b',
+                model: 'openai/gpt-oss-120b', 
                 messages: apiMessages,
-                temperature: 0.7,
-                max_tokens: 300
+                temperature: 0.6,
+                max_tokens: 1500
             })
         });
 
@@ -176,7 +85,7 @@ async function handleSend() {
 
         if (data.error) {
             addMessageToUI(`Error: ${data.error.message}`, 'ai');
-            setState('IDLE');
+            isProcessing = false;
             return;
         }
 
@@ -185,44 +94,31 @@ async function handleSend() {
         chatHistory.push({ text: aiResponse, sender: 'ai' });
         saveMemory();
 
-        // Play the natural voice
-        await playNaturalVoice(aiResponse);
-
     } catch (error) {
         document.getElementById('thinking-indicator').remove();
-        addMessageToUI("Network error.", 'ai');
-        setState('IDLE');
+        addMessageToUI("Network error. Please check your internet connection.", 'ai');
+        console.error(error);
     }
+    isProcessing = false;
 }
 
-// --- NAVIGATION & EVENT LISTENERS ---
-function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    document.getElementById(screenId).classList.remove('hidden');
-    if (screenId === 'voice-screen') setState('IDLE');
-}
-
-sendBtn.addEventListener('click', handleSend);
+sendBtn.addEventListener('click', () => handleSend());
 userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
 
-micBtn.addEventListener('click', () => {
-    if (appState !== 'IDLE') return; // Don't listen if busy
-    if (isListening) recognition.stop();
-    else recognition.start();
-});
-
-chooseVoiceBtn.addEventListener('click', () => {
-    alert("Voice selection menu: Tara, Leah, Jess, Leo, Dan (Coming soon!)");
+makeNotesBtn.addEventListener('click', () => {
+    if (chatHistory.length === 0) {
+        alert("Chat with your tutor first so I have something to make notes from!");
+        return;
+    }
+    handleSend("Please make structured study notes from our conversation so far. Make it easy to review.");
 });
 
 document.getElementById('clear-memory-chat').addEventListener('click', () => {
-    if (confirm("Erase all memory?")) {
+    if (confirm("Erase all memory and start a new session?")) {
         chatHistory = [];
         localStorage.clear();
         renderHistory();
-        setState('IDLE');
     }
 });
 
 renderHistory();
-setState('IDLE');
