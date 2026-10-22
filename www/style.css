@@ -1,8 +1,4 @@
-:root {
-    --bg: #0f172a; --surface: #1e293b; --primary: #3b82f6;
-    --text: #f8fafc; --text-muted: #94a3b8; --border: #334155;
-    --green: #10b981; --red: #ef4444;
-}
+:root { --bg: #0f172a; --surface: #1e293b; --primary: #3b82f6; --text: #f8fafc; --text-muted: #94a3b8; --border: #334155; --green: #10b981; --red: #ef4444; }
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
 .screen { display: flex; flex-direction: column; height: 100%; width: 100%; max-width: 600px; margin: 0 auto; background: var(--bg); }
@@ -17,36 +13,34 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
 .tutor-select-grid { display: flex; gap: 10px; flex-wrap: wrap; }
 .tutor-opt { padding: 12px; background: var(--surface); border: 2px solid transparent; border-radius: 8px; cursor: pointer; flex: 1; text-align: center; font-size: 0.9rem;}
 .tutor-opt.selected { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); }
-.primary-btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-top: 30px; cursor: pointer; }
+.primary-btn { background: var(--primary); color: white; border: none; padding: 18px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-top: 30px; cursor: pointer; width: 100%;}
 .danger-btn { background: transparent; border: 1px solid var(--red); color: var(--red); padding: 15px; border-radius: 8px; margin: 20px; font-weight: bold; }
 
-/* APP SHELL & NAV */
+/* APP SHELL */
 #app-shell { display: flex; flex-direction: column; height: 100%; }
-.tab-content { flex: 1; overflow-y: auto; padding-bottom: 70px; /* space for nav */ }
-.bottom-nav { position: absolute; bottom: 0; width: 100%; max-width: 600px; background: var(--surface); display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid var(--border); }
-.bottom-nav button { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.bottom-nav button span { font-size: 0.7rem; }
+.tab-content { flex: 1; overflow-y: auto; padding-bottom: 70px; }
+.bottom-nav { position: absolute; bottom: 0; width: 100%; max-width: 600px; background: var(--surface); display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid var(--border); z-index: 10;}
+.bottom-nav button { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
 .bottom-nav button.active { color: var(--primary); }
 
 /* DASHBOARD */
 .dash-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; background: var(--surface); }
-.dash-header h2 { font-size: 1.4rem; }
-.dash-header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 5px; }
-.level-badge { background: var(--primary); padding: 8px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
+.dash-header h2 { font-size: 1.4rem; } .dash-header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 5px; }
+.level-badge { background: var(--primary); padding: 8px 12px; border-radius: 20px; font-weight: bold; }
 .xp-banner { padding: 20px; background: linear-gradient(90deg, #1e293b, #0f172a); margin: 15px; border-radius: 12px; border: 1px solid var(--border); }
 .xp-banner p { font-size: 0.85rem; margin-bottom: 10px; color: var(--text-muted); }
 .xp-progress-track { background: #000; height: 10px; border-radius: 5px; overflow: hidden; }
 .xp-progress-fill { height: 100%; background: var(--green); width: 0%; transition: width 0.5s; }
-h3 { padding: 0 20px; margin-top: 10px; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+h3 { padding: 0 20px; margin-top: 10px; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; }
 .subjects-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
-.subject-card { padding: 25px 15px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; text-align: center; cursor: pointer; background: var(--surface); border: 1px solid var(--border); transition: 0.2s; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.subject-card { padding: 25px 15px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; text-align: center; cursor: pointer; background: var(--surface); border: 1px solid var(--border); }
 .subject-card:active { transform: scale(0.95); }
 
 /* TUTOR SCREEN */
 .tutor-header { padding: 15px; background: var(--surface); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-#current-subject-title { font-weight: bold; font-size: 1rem; }
+#current-subject-title { font-weight: bold; }
 #study-timer { color: var(--green); font-family: monospace; font-weight: bold; }
-#robot-container { height: 150px; background: #000; display: flex; justify-content: center; align-items: center; position: relative; border-bottom: 1px solid var(--border); }
+#robot-container { height: 150px; background: #000; display: flex; justify-content: center; align-items: center; position: relative; }
 #robot-canvas { width: 100%; height: 100%; }
 #robot-name-badge { position: absolute; bottom: 10px; right: 15px; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; }
 #chat-actions { padding: 10px; background: var(--surface); display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid var(--border); }
@@ -59,6 +53,7 @@ h3 { padding: 0 20px; margin-top: 10px; color: var(--text-muted); font-size: 0.9
 #user-input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: var(--bg); color: white; outline: none; }
 .round-btn { background: var(--primary); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; font-weight: bold; cursor: pointer; }
 
-/* PLACEHOLDERS & PROFILE */
-.placeholder-content { padding: 40px 20px; text-align: center; color: var(--text-muted); }
-.profile-card { background: var(--surface); padding: 20px; margin: 20px; border-radius: 12px; border: 1px solid var(--border); line-height: 2; }
+/* PROFILE & MEMORY */
+.profile-card, .memory-card { background: var(--surface); padding: 20px; margin: 20px; border-radius: 12px; border: 1px solid var(--border); line-height: 2; }
+.memory-card h3 { padding: 0; margin-bottom: 5px; color: var(--primary); }
+#ai-memory-input { width: 100%; height: 80px; background: var(--bg); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px; resize: none; outline: none; font-family: inherit; }
