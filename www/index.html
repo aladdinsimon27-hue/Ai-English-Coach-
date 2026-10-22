@@ -3,74 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Personal Tutor 90+</title>
+    <title>AI EduSchool</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="main-menu" class="screen">
-        <h1 class="welcome-title">Welcome Back! 👋</h1>
-        <div class="level-card">
-            <span id="menu-level">Level 1</span>
-            <div class="xp-bar-container"><div id="menu-xp-bar" class="xp-bar-fill"></div></div>
-        </div>
-        <p class="welcome-sub">Ready to score 90+?</p>
-        <div class="menu-buttons">
-            <button class="menu-btn" onclick="showScreen('tutor-select-screen')">🤖 CHOOSE YOUR TUTOR</button>
-            <button class="menu-btn" onclick="document.getElementById('file-upload').click()">📚 UPLOAD LESSON FILE</button>
-            <button class="menu-btn" onclick="showScreen('chat-screen')">🚀 START STUDYING</button>
-        </div>
-        <input type="file" id="file-upload" accept=".txt" style="display:none;">
-    </div>
 
-    <!-- TUTOR SELECTION SCREEN -->
-    <div id="tutor-select-screen" class="screen hidden">
-        <header>
-            <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
-            <h1>Choose Your Tutor</h1>
-            <div style="width: 30px;"></div>
-        </header>
-        <div class="tutor-grid">
-            <div class="tutor-card" onclick="selectTutor('Nova', 'friendly and encouraging', '#87CEEB')">
-                <div class="tutor-icon" style="background:#87CEEB;">🤖</div>
-                <h3>Nova</h3><p>Friendly & Encouraging</p>
+    <!-- ONBOARDING SCREEN -->
+    <div id="onboarding-screen" class="screen hidden">
+        <div class="onboarding-container">
+            <h1>Welcome to AI EduSchool</h1>
+            <p>Let's build your personalized learning path.</p>
+            
+            <label>What is your name?</label>
+            <input type="text" id="onboard-name" placeholder="Enter your name">
+
+            <label>What grade are you in?</label>
+            <select id="onboard-grade">
+                <option value="9">Grade 9</option>
+                <option value="10">Grade 10</option>
+                <option value="11">Grade 11</option>
+                <option value="12">Grade 12</option>
+            </select>
+
+            <label>Select your Curriculum:</label>
+            <select id="onboard-curriculum">
+                <option value="Ethiopian National Curriculum">Ethiopian National Curriculum</option>
+                <option value="International (IGCSE/IB)">International (IGCSE/IB)</option>
+            </select>
+
+            <label>Choose your AI Tutor Persona:</label>
+            <div class="tutor-select-grid">
+                <div class="tutor-opt" onclick="selectOnboardTutor('Nova', this)">🤖 Nova (Friendly)</div>
+                <div class="tutor-opt" onclick="selectOnboardTutor('Atlas', this)">🧑‍🏫 Atlas (Strict)</div>
+                <div class="tutor-opt" onclick="selectOnboardTutor('Pixel', this)">🎨 Pixel (Funny)</div>
             </div>
-            <div class="tutor-card" onclick="selectTutor('Atlas', 'strict and Socratic', '#FFD700')">
-                <div class="tutor-icon" style="background:#FFD700; color:#000;">🤖</div>
-                <h3>Atlas</h3><p>Strict & Socratic</p>
-            </div>
-            <div class="tutor-card" onclick="selectTutor('Pixel', 'funny and uses analogies', '#FF69B4')">
-                <div class="tutor-icon" style="background:#FF69B4;">🤖</div>
-                <h3>Pixel</h3><p>Funny & Relatable</p>
-            </div>
+
+            <button class="primary-btn" onclick="finishOnboarding()">Create My School</button>
         </div>
     </div>
 
-    <div id="chat-screen" class="screen hidden">
-        <header>
-            <button class="back-btn" onclick="showScreen('main-menu')">❮</button>
-            <div id="study-timer">⏱️ 00:00:00</div>
-            <div class="header-xp">Lvl <span id="header-level">1</span></div>
-        </header>
-        <div class="xp-track"><div id="main-xp-bar" class="xp-bar-fill"></div></div>
+    <!-- MAIN APP SHELL -->
+    <div id="app-shell" class="screen hidden">
         
-        <!-- 3D Robot Container -->
-        <div id="robot-container">
-            <canvas id="robot-canvas"></canvas>
-            <div id="robot-name-badge">Nova</div>
+        <!-- DASHBOARD SCREEN -->
+        <div id="dashboard-screen" class="tab-content">
+            <header class="dash-header">
+                <div>
+                    <h2>Hello, <span id="dash-name">Student</span>! 👋</h2>
+                    <p id="dash-context">Grade 11 • Ethiopian Curriculum</p>
+                </div>
+                <div class="level-badge">Lvl <span id="dash-level">1</span></div>
+            </header>
+
+            <div class="xp-banner">
+                <p>Daily Goal Progress</p>
+                <div class="xp-progress-track"><div id="dash-xp-bar" class="xp-progress-fill"></div></div>
+            </div>
+
+            <h3>My Subjects</h3>
+            <div class="subjects-grid">
+                <div class="subject-card math" onclick="openTutor('Mathematics')">📐 Math</div>
+                <div class="subject-card physics" onclick="openTutor('Physics')">🔭 Physics</div>
+                <div class="subject-card chem" onclick="openTutor('Chemistry')">🧪 Chemistry</div>
+                <div class="subject-card bio" onclick="openTutor('Biology')">🧬 Biology</div>
+                <div class="subject-card eng" onclick="openTutor('English')">🇬🇧 English</div>
+                <div class="subject-card hist" onclick="openTutor('History')">🏛️ History</div>
+            </div>
         </div>
 
-        <div id="chat-actions">
-            <button id="quiz-btn" class="action-btn">🧠 Quiz Me</button>
-            <button id="feynman-btn" class="action-btn">🧑‍🏫 Feynman Mode</button>
-            <button id="make-notes-btn" class="action-btn">📝 Notes</button>
-        </div>
-        <div id="lesson-status">No file uploaded</div>
+        <!-- AI TUTOR SCREEN -->
+        <div id="tutor-screen" class="tab-content hidden">
+            <header class="tutor-header">
+                <button class="back-btn" onclick="switchTab('dashboard-screen')">❮</button>
+                <div id="current-subject-title">Select a Subject</div>
+                <div id="study-timer">⏱️ 00:00:00</div>
+            </header>
+            
+            <div id="robot-container">
+                <canvas id="robot-canvas"></canvas>
+                <div id="robot-name-badge">Nova</div>
+            </div>
 
-        <main id="chat-container"></main>
-        <footer class="chat-footer">
-            <input type="text" id="user-input" placeholder="Type your answer..." autocomplete="off">
-            <button id="send-btn" class="round-btn">➤</button>
-        </footer>
+            <div id="chat-actions">
+                <button id="quiz-btn" class="action-btn">🧠 Quiz</button>
+                <button id="feynman-btn" class="action-btn">🧑‍🏫 Feynman</button>
+                <button id="upload-btn" class="action-btn" onclick="document.getElementById('file-upload').click()">📎 File</button>
+                <button id="clear-memory-chat" class="action-btn" style="color:#ef4444;">Reset</button>
+            </div>
+            <input type="file" id="file-upload" accept=".txt" style="display:none;">
+
+            <main id="chat-container">
+                <div class="message ai-message">Welcome to class! Select a subject from the dashboard or ask me any question to begin.</div>
+            </main>
+            
+            <footer class="chat-footer">
+                <input type="text" id="user-input" placeholder="Ask your tutor..." autocomplete="off">
+                <button id="send-btn" class="round-btn">➤</button>
+            </footer>
+        </div>
+
+        <!-- PLANNER SCREEN (Placeholder for Module 3) -->
+        <div id="planner-screen" class="tab-content hidden">
+            <header><h2>My Study Planner</h2></header>
+            <div class="placeholder-content">
+                <p>📅 Your personalized AI study schedule will appear here.</p>
+                <p>(Coming in Module 3)</p>
+            </div>
+        </div>
+
+        <!-- PROFILE SCREEN -->
+        <div id="profile-screen" class="tab-content hidden">
+            <header><h2>My Profile</h2></header>
+            <div class="profile-card">
+                <p><strong>Name:</strong> <span id="prof-name"></span></p>
+                <p><strong>Grade:</strong> <span id="prof-grade"></span></p>
+                <p><strong>Curriculum:</strong> <span id="prof-curr"></span></p>
+                <p><strong>Tutor:</strong> <span id="prof-tutor"></span></p>
+            </div>
+            <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
+        </div>
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav class="bottom-nav">
+            <button onclick="switchTab('dashboard-screen')">🏠 Home</button>
+            <button onclick="switchTab('tutor-screen')">🧑‍🏫 Tutor</button>
+            <button onclick="switchTab('planner-screen')">📅 Planner</button>
+            <button onclick="switchTab('profile-screen')">⚙️ Profile</button>
+        </nav>
     </div>
 
     <script src="three.min.js"></script>
