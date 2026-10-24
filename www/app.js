@@ -1,4 +1,4 @@
-// AI EduSchool - Exact Robot & Fixed Audio
+// AI EduSchool - Bulletproof Audio (Base64) & Exact Robot Model
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -13,17 +13,7 @@ let currentMode = 'chat';
 let timerInterval = null, secondsElapsed = 0;
 let selectedTutor = 'Nova';
 
-// --- AUDIO UNLOCK FOR ANDROID WEBVIEW ---
-// We play a silent sound on the first user interaction to unlock the audio context
-function unlockAudio() {
-    if (!ttsAudio.src) {
-        ttsAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"; // Tiny silent WAV
-        ttsAudio.play().then(() => { ttsAudio.pause(); ttsAudio.src = ""; }).catch(e => console.log("Unlock failed:", e));
-    }
-}
-document.body.addEventListener('click', unlockAudio, { once: true });
-
-// --- NATURAL VOICE (GROQ TTS) ---
+// --- BULLETPROOF AUDIO ---
 async function playGroqTTS(text) {
     if (mouth) animateMouth(true);
     
@@ -39,15 +29,24 @@ async function playGroqTTS(text) {
             })
         });
 
-        if (!response.ok) throw new Error('TTS Network error');
+        if (!response.ok) {
+            const err = await response.text();
+            alert("Groq TTS Error: " + err); // SHOW ERROR ON SCREEN
+            throw new Error('TTS Network error');
+        }
+
         const audioBlob = await response.blob();
         
-        // Use the hidden audio element
-        ttsAudio.src = URL.createObjectURL(audioBlob);
-        ttsAudio.play().catch(e => {
-            console.error("Playback blocked:", e);
-            if (mouth) animateMouth(false);
-        });
+        // CONVERT BLOB TO BASE64 (Fixes Android WebView block)
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+            ttsAudio.src = reader.result; // Play Base64 directly
+            ttsAudio.play().catch(e => {
+                alert("Android Playback Error: " + e.message);
+                if (mouth) animateMouth(false);
+            });
+        };
     } catch (error) {
         console.error("TTS Error:", error);
         if (mouth) animateMouth(false);
@@ -163,57 +162,53 @@ function init3DRobot() {
     const greyMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.4, metalness: 0.6 });
     const cyanGlow = new THREE.MeshBasicMaterial({ color: 0x00ffff });
 
-    // --- HEAD ---
+    // HEAD
     head = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), whiteMat);
     head.scale.set(1.2, 1, 0.8); head.position.y = 2.5; robotGroup.add(head);
     
-    // Screen Face (Black Box on front)
+    // SCREEN FACE
     const screen = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 0.1), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }));
     screen.position.set(0, 2.5, 0.9); robotGroup.add(screen);
 
-    // Eyes (Cyan Ovals)
+    // EYES
     leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), cyanGlow); leftEye.scale.set(1, 1.5, 0.2); leftEye.position.set(-0.4, 2.6, 0.96); robotGroup.add(leftEye);
     rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), cyanGlow); rightEye.scale.set(1, 1.5, 0.2); rightEye.position.set(0.4, 2.6, 0.96); robotGroup.add(rightEye);
 
-    // Mouth (Cyan Smile - Torus)
+    // MOUTH
     mouth = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 8, 16, Math.PI), cyanGlow);
     mouth.rotation.x = Math.PI; mouth.position.set(0, 2.35, 0.96); robotGroup.add(mouth);
 
-    // --- BODY ---
+    // BODY
     const body = new THREE.Mesh(new THREE.CylinderGeometry(1, 0.7, 1.8, 32), whiteMat);
     body.position.y = 1; robotGroup.add(body);
 
-    // Chest Ring
+    // CHEST
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.05, 16, 32), greyMat);
     ring.position.set(0, 1.2, 0.95); robotGroup.add(ring);
     const chestGlow = new THREE.Mesh(new THREE.CircleGeometry(0.15, 32), cyanGlow);
     chestGlow.position.set(0, 1.2, 0.95); robotGroup.add(chestGlow);
 
-    // --- ARMS ---
+    // ARMS
     const armGeo = new THREE.CylinderGeometry(0.15, 0.15, 1.2, 16);
     const jointGeo = new THREE.SphereGeometry(0.2, 16, 16);
     
-    // Left Arm
     leftArm = new THREE.Group();
     const lUpper = new THREE.Mesh(armGeo, whiteMat); lUpper.position.y = 0.6; leftArm.add(lUpper);
     const lJoint = new THREE.Mesh(jointGeo, greyMat); leftArm.add(lJoint);
     const lFore = new THREE.Mesh(armGeo, whiteMat); lFore.position.y = -0.6; leftArm.add(lFore);
     leftArm.position.set(-1.1, 1.6, 0); leftArm.rotation.z = 0.4; robotGroup.add(leftArm);
 
-    // Right Arm
     rightArm = new THREE.Group();
     const rUpper = new THREE.Mesh(armGeo, whiteMat); rUpper.position.y = 0.6; rightArm.add(rUpper);
     const rJoint = new THREE.Mesh(jointGeo, greyMat); rightArm.add(rJoint);
     const rFore = new THREE.Mesh(armGeo, whiteMat); rFore.position.y = -0.6; rightArm.add(rFore);
     rightArm.position.set(1.1, 1.6, 0); rightArm.rotation.z = -0.4; robotGroup.add(rightArm);
 
-    // --- LEGS ---
+    // LEGS
     const legGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 16);
     const footGeo = new THREE.BoxGeometry(0.4, 0.2, 0.6);
-    
     const leftLeg = new THREE.Mesh(legGeo, whiteMat); leftLeg.position.set(-0.4, -0.5, 0); robotGroup.add(leftLeg);
     const leftFoot = new THREE.Mesh(footGeo, greyMat); leftFoot.position.set(-0.4, -1.2, 0.1); robotGroup.add(leftFoot);
-    
     const rightLeg = new THREE.Mesh(legGeo, whiteMat); rightLeg.position.set(0.4, -0.5, 0); robotGroup.add(rightLeg);
     const rightFoot = new THREE.Mesh(footGeo, greyMat); rightFoot.position.set(0.4, -1.2, 0.1); robotGroup.add(rightFoot);
 
@@ -226,17 +221,12 @@ function animate3D() {
     if (!robotGroup) return;
     const time = clock.getElapsedTime();
     
-    // Idle floating
     robotGroup.position.y = Math.sin(time * 2) * 0.1;
-    
-    // Head look around
     head.rotation.y = Math.sin(time * 0.5) * 0.2;
     
-    // Blinking
     const blink = Math.sin(time * 3) > 0.95 ? 0.1 : 1;
     leftEye.scale.y = 1.5 * blink; rightEye.scale.y = 1.5 * blink;
     
-    // Thumbs up waving animation
     if (Math.sin(time * 0.5) > 0.8) {
         rightArm.rotation.z = -1.5 + Math.sin(time * 10) * 0.3;
     } else {
