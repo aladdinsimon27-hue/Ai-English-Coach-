@@ -1,4 +1,4 @@
-// AI EduSchool - Module 2 Fixed: Gallery, Two Arms, Natural Voice
+// AI EduSchool - Fixed Vision Model & TTS Audio
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -13,9 +13,9 @@ let timerInterval = null, secondsElapsed = 0;
 let selectedTutor = 'Nova';
 let currentSubject = 'General';
 
-// --- NATURAL VOICE (GROQ TTS) ---
+// --- NATURAL VOICE (GROQ PlayAI TTS) ---
 async function playGroqTTS(text) {
-    if (mouth) animateMouth(true); // Start mouth moving immediately
+    if (mouth) animateMouth(true); // Start mouth moving
     
     try {
         const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
@@ -25,9 +25,9 @@ async function playGroqTTS(text) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'canoplabs/orpheus-v1-english', // Using Groq's natural voice
+                model: 'playai-tts', // Updated to Groq's current TTS model
                 input: text,
-                voice: 'tara', // 'tara' is a clear, natural female voice
+                voice: 'Celeste-PlayAI', // A natural, clear voice
                 response_format: 'wav'
             })
         });
@@ -39,8 +39,12 @@ async function playGroqTTS(text) {
         const audio = new Audio(audioUrl);
         
         audio.onended = () => { if (mouth) animateMouth(false); };
-        audio.onerror = () => { if (mouth) animateMouth(false); };
-        audio.play();
+        
+        // Catch play errors (e.g. if Android blocks it)
+        audio.play().catch(e => {
+            console.error("Audio playback blocked:", e);
+            if (mouth) animateMouth(false);
+        });
 
     } catch (error) {
         console.error("TTS Error:", error);
@@ -145,7 +149,7 @@ function startTimer() {
     }, 1000);
 }
 
-// --- 3D ROBOT (NOW WITH TWO ARMS) ---
+// --- 3D ROBOT (WITH TWO ARMS) ---
 let scene, camera, renderer, robotGroup, head, leftEye, rightEye, mouth, leftArm, rightArm, clock = new THREE.Clock();
 function init3DRobot() {
     const canvas = document.getElementById('robot-canvas');
@@ -161,31 +165,24 @@ function init3DRobot() {
     
     robotGroup = new THREE.Group();
     
-    // Body
     const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1, 2, 32), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.2, metalness: 0.5 }));
     body.position.y = -0.5; robotGroup.add(body);
     
-    // Head
     head = new THREE.Mesh(new THREE.SphereGeometry(1.1, 32, 32), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.2, metalness: 0.5 }));
     head.position.y = 1.5; robotGroup.add(head);
     
-    // Visor
     const visor = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 0.2), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }));
     visor.position.set(0, 1.5, 1.05); robotGroup.add(visor);
     
-    // Eyes
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
     leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), eyeMat); leftEye.position.set(-0.4, 1.6, 1.15); robotGroup.add(leftEye);
     rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), eyeMat); rightEye.position.set(0.4, 1.6, 1.15); robotGroup.add(rightEye);
     
-    // Mouth
     mouth = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.1), eyeMat); mouth.position.set(0, 1.25, 1.15); robotGroup.add(mouth);
     
-    // LEFT ARM (NEW!)
     leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.5), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
     leftArm.position.set(-1.4, 0, 0); leftArm.rotation.z = 0.5; robotGroup.add(leftArm);
     
-    // RIGHT ARM
     rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.5), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
     rightArm.position.set(1.4, 0, 0); rightArm.rotation.z = -0.5; robotGroup.add(rightArm);
     
@@ -266,8 +263,8 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
         messages.push({ role: 'user', content: text });
     }
 
-    // Use Vision model if image, else standard model
-    const modelToUse = imageBase64 ? 'llama-3.2-11b-vision-preview' : 'openai/gpt-oss-120b';
+    // Updated Vision Model
+    const modelToUse = imageBase64 ? 'llama-3.2-11b-vision-instruct' : 'openai/gpt-oss-120b';
 
     try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -287,12 +284,13 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
 
         if (aiResponse.toLowerCase().includes("correct") || aiResponse.toLowerCase().includes("great job")) addXP(15);
 
-        // Play natural Groq Voice
+        // Play Voice
         playGroqTTS(aiResponse);
 
     } catch (e) {
         document.getElementById('think').remove();
         addMessageToUI("Network error.", 'ai');
+        if (mouth) animateMouth(false);
     }
     isProcessing = false;
 }
