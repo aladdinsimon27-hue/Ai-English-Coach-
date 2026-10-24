@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Hidden audio element to unlock WebView autoplay -->
+    <audio id="tts-audio" style="display:none;"></audio>
 
     <div id="onboarding-screen" class="screen hidden">
         <div class="onboarding-container">
@@ -77,7 +79,6 @@
                 <button id="file-btn" class="action-btn" onclick="document.getElementById('file-upload').click()">📎 Text</button>
                 <button id="clear-chat" class="action-btn" style="color:#ef4444;">Reset</button>
             </div>
-            <!-- Hidden Inputs for File/Image -->
             <input type="file" id="image-upload" accept="image/*" style="display:none;">
             <input type="file" id="file-upload" accept=".txt" style="display:none;">
 
@@ -103,15 +104,12 @@
                 <p><strong>Curriculum:</strong> <span id="prof-curr"></span></p>
                 <p><strong>Tutor:</strong> <span id="prof-tutor"></span></p>
             </div>
-            
-            <!-- NEW: AI MEMORY -->
             <div class="memory-card">
                 <h3>🧠 AI Memory & Instructions</h3>
-                <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:10px;">Tell your AI tutor how you learn best. (e.g., "I am weak in Algebra", "Explain things slowly", "Use more examples")</p>
+                <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:10px;">Tell your AI tutor how you learn best.</p>
                 <textarea id="ai-memory-input" placeholder="Type your instructions here..."></textarea>
                 <button class="primary-btn" style="margin-top:10px; padding:10px;" onclick="saveMemoryInstructions()">Save Instructions</button>
             </div>
-
             <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
         </div>
 

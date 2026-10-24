@@ -1,5 +1,16 @@
 {
   "appId": "com.aladdin.englishcoach",
-  "appName": "AI English Coach",
-  "webDir": "www"
+  "appName": "AI EduSchool",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "Keyboard": {
+      "resize": "body"
+    }
+  }
 }
