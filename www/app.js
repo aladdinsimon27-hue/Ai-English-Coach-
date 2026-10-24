@@ -1,4 +1,4 @@
-// AI EduSchool - Module 2: Vision, Voice, and Memory
+// AI EduSchool - Module 2 Fixed: Gallery, Two Arms, Natural Voice
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -13,23 +13,44 @@ let timerInterval = null, secondsElapsed = 0;
 let selectedTutor = 'Nova';
 let currentSubject = 'General';
 
-// --- TTS (VOICE) LOGIC ---
-function speakText(text) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel(); // stop previous speech
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.95;
+// --- NATURAL VOICE (GROQ TTS) ---
+async function playGroqTTS(text) {
+    if (mouth) animateMouth(true); // Start mouth moving immediately
     
-    utterance.onstart = () => { if (mouth) animateMouth(true); };
-    utterance.onend = () => { if (mouth) animateMouth(false); };
+    try {
+        const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'canoplabs/orpheus-v1-english', // Using Groq's natural voice
+                input: text,
+                voice: 'tara', // 'tara' is a clear, natural female voice
+                response_format: 'wav'
+            })
+        });
 
-    window.speechSynthesis.speak(utterance);
+        if (!response.ok) throw new Error('TTS Network error');
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        audio.onended = () => { if (mouth) animateMouth(false); };
+        audio.onerror = () => { if (mouth) animateMouth(false); };
+        audio.play();
+
+    } catch (error) {
+        console.error("TTS Error:", error);
+        if (mouth) animateMouth(false); // Stop mouth if voice fails
+    }
 }
 
 function animateMouth(isSpeaking) {
     if (isSpeaking) {
-        mouth.scale.y = Math.random() * 2 + 1;
+        mouth.scale.y = Math.random() * 2.5 + 0.5;
         setTimeout(() => animateMouth(isSpeaking), 100);
     } else {
         mouth.scale.y = 1;
@@ -124,8 +145,8 @@ function startTimer() {
     }, 1000);
 }
 
-// --- 3D ROBOT ---
-let scene, camera, renderer, robotGroup, head, leftEye, rightEye, mouth, rightArm, clock = new THREE.Clock();
+// --- 3D ROBOT (NOW WITH TWO ARMS) ---
+let scene, camera, renderer, robotGroup, head, leftEye, rightEye, mouth, leftArm, rightArm, clock = new THREE.Clock();
 function init3DRobot() {
     const canvas = document.getElementById('robot-canvas');
     const container = document.getElementById('robot-container');
@@ -137,22 +158,41 @@ function init3DRobot() {
     renderer.setPixelRatio(window.devicePixelRatio);
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(5, 10, 7); scene.add(dir);
+    
     robotGroup = new THREE.Group();
+    
+    // Body
     const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1, 2, 32), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.2, metalness: 0.5 }));
     body.position.y = -0.5; robotGroup.add(body);
+    
+    // Head
     head = new THREE.Mesh(new THREE.SphereGeometry(1.1, 32, 32), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.2, metalness: 0.5 }));
     head.position.y = 1.5; robotGroup.add(head);
+    
+    // Visor
     const visor = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 0.2), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }));
     visor.position.set(0, 1.5, 1.05); robotGroup.add(visor);
+    
+    // Eyes
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
     leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), eyeMat); leftEye.position.set(-0.4, 1.6, 1.15); robotGroup.add(leftEye);
     rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), eyeMat); rightEye.position.set(0.4, 1.6, 1.15); robotGroup.add(rightEye);
+    
+    // Mouth
     mouth = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.1), eyeMat); mouth.position.set(0, 1.25, 1.15); robotGroup.add(mouth);
+    
+    // LEFT ARM (NEW!)
+    leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.5), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
+    leftArm.position.set(-1.4, 0, 0); leftArm.rotation.z = 0.5; robotGroup.add(leftArm);
+    
+    // RIGHT ARM
     rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.5), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
     rightArm.position.set(1.4, 0, 0); rightArm.rotation.z = -0.5; robotGroup.add(rightArm);
+    
     scene.add(robotGroup);
     animate3D();
 }
+
 function animate3D() {
     requestAnimationFrame(animate3D);
     if (!robotGroup) return;
@@ -166,7 +206,7 @@ function animate3D() {
     renderer.render(scene, camera);
 }
 
-// --- FILE / IMAGE UPLOAD LOGIC ---
+// --- FILE / IMAGE UPLOAD ---
 document.getElementById('file-upload').addEventListener('change', (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -180,13 +220,12 @@ document.getElementById('image-upload').addEventListener('change', (event) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-        // Sends a special flag for images
-        handleSend("I have uploaded an image of a problem. Please read it and solve it step-by-step.", e.target.result);
+        handleSend("I have uploaded an image of a problem. Please read it carefully and solve it step-by-step.", e.target.result);
     };
     reader.readAsDataURL(file);
 });
 
-// --- AI BRAIN (WITH VISION & MEMORY) ---
+// --- AI BRAIN ---
 async function handleSend(customPrompt = null, imageBase64 = null) {
     if (isProcessing || !profile) return;
     const text = customPrompt || userInput.value.trim();
@@ -200,7 +239,6 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
         userInput.value = '';
         localStorage.setItem('tutorHistory', JSON.stringify(chatHistory));
     } else {
-        // Show the user's system upload in the chat
         addMessageToUI(customPrompt, 'user');
     }
 
@@ -208,20 +246,14 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     think.className = 'message ai-message'; think.textContent = 'Analyzing...'; think.id = 'think';
     chatContainer.appendChild(think); chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    // Context-Aware System Prompt with Memory!
     let systemPrompt = `You are ${profile.tutor}, an expert AI tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: ${profile.tutor === 'Nova' ? 'friendly' : profile.tutor === 'Atlas' ? 'strict' : 'funny'}.`;
     if (profile.memory) systemPrompt += ` \nCRITICAL STUDENT MEMORY: ${profile.memory}. Adapt your teaching to this.`;
-    
     if (currentMode === 'quiz') { systemPrompt += ` \nGenerate a 3-question quiz.`; currentMode = 'chat'; }
     if (currentMode === 'feynman') { systemPrompt += ` \nAct confused. Let the student explain to you.`; currentMode = 'chat'; }
 
-    // Prepare Messages (Vision vs Text)
     let messages = [{ role: 'system', content: systemPrompt }];
-    
-    // Add history
     chatHistory.forEach(m => messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
 
-    // Handle Image
     if (imageBase64) {
         messages.push({
             role: 'user',
@@ -234,7 +266,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
         messages.push({ role: 'user', content: text });
     }
 
-    // Use Vision model if there is an image, otherwise standard text model
+    // Use Vision model if image, else standard model
     const modelToUse = imageBase64 ? 'llama-3.2-11b-vision-preview' : 'openai/gpt-oss-120b';
 
     try {
@@ -255,8 +287,8 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
 
         if (aiResponse.toLowerCase().includes("correct") || aiResponse.toLowerCase().includes("great job")) addXP(15);
 
-        // Make the AI speak!
-        speakText(aiResponse);
+        // Play natural Groq Voice
+        playGroqTTS(aiResponse);
 
     } catch (e) {
         document.getElementById('think').remove();
