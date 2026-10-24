@@ -1,4 +1,4 @@
-// AI EduSchool - Fixed TTS Limit & Mouth Animation
+// AI EduSchool - TTS length fix
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -13,7 +13,7 @@ let currentMode = 'chat';
 let timerInterval = null, secondsElapsed = 0;
 let selectedTutor = 'Nova';
 
-// --- FIXED MOUTH ANIMATION (No more zombie loops) ---
+// --- FIXED MOUTH ANIMATION ---
 let isMouthMoving = false;
 function animateMouth(isSpeaking) {
     isMouthMoving = isSpeaking;
@@ -27,14 +27,14 @@ function animateMouth(isSpeaking) {
     }
 }
 
-// --- FIXED AUDIO (Truncates text to prevent 4000 char error) ---
+// --- FIXED AUDIO (Truncates to fit 200 char limit) ---
 async function playGroqTTS(text) {
     animateMouth(true);
     
-    // TRUNCATE TEXT IF OVER 3900 CHARACTERS
-    let speechText = text;
-    if (speechText.length > 3900) {
-        speechText = speechText.substring(0, 3900) + "...";
+    // Clean text and trim to safe length to avoid 200-char limit
+    let speechText = text.replace(/[*#_`]/g, '').trim();
+    if (speechText.length > 190) {
+        speechText = speechText.substring(0, 187) + "...";
     }
 
     try {
