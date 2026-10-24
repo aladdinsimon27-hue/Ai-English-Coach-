@@ -1,4 +1,4 @@
-// AI EduSchool - TTS length fix
+// AI EduSchool - TTS Audio Queue for Long Text
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -13,47 +13,74 @@ let currentMode = 'chat';
 let timerInterval = null, secondsElapsed = 0;
 let selectedTutor = 'Nova';
 
-// --- FIXED MOUTH ANIMATION ---
-let isMouthMoving = false;
-function animateMouth(isSpeaking) {
-    isMouthMoving = isSpeaking;
-    if (isSpeaking) {
+// --- SMART AUDIO QUEUE SYSTEM ---
+let speechQueue = [];
+let isSpeaking = false;
+
+function animateMouth(moving) {
+    if (moving) {
         mouth.scale.y = Math.random() * 2.5 + 0.5;
-        setTimeout(() => {
-            if (isMouthMoving) animateMouth(true);
-        }, 100);
+        if (isSpeaking) setTimeout(() => animateMouth(true), 100);
     } else {
         mouth.scale.y = 1;
     }
 }
 
-// --- FIXED AUDIO (Truncates to fit 200 char limit) ---
-async function playGroqTTS(text) {
-    animateMouth(true);
+// Splits long text into <180 char chunks at sentence boundaries
+function splitTextIntoChunks(text) {
+    // Remove markdown symbols so she doesn't say "asterisk asterisk"
+    let cleanText = text.replace(/[*#_|]/g, '').replace(/\n+/g, ' ').trim();
+    let sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
     
-    // Clean text and trim to safe length to avoid 200-char limit
-    let speechText = text.replace(/[*#_`]/g, '').trim();
-    if (speechText.length > 190) {
-        speechText = speechText.substring(0, 187) + "...";
+    let chunks = [];
+    let currentChunk = "";
+
+    sentences.forEach(sentence => {
+        if ((currentChunk + sentence).length < 180) {
+            currentChunk += sentence + " ";
+        } else {
+            if (currentChunk) chunks.push(currentChunk.trim());
+            currentChunk = sentence + " ";
+        }
+    });
+    if (currentChunk) chunks.push(currentChunk.trim());
+    return chunks;
+}
+
+async function playGroqTTS(text) {
+    // Stop any currently playing audio
+    ttsAudio.pause();
+    speechQueue = splitTextIntoChunks(text);
+    isSpeaking = true;
+    
+    if (speechQueue.length > 0) {
+        animateMouth(true);
+        playNextChunk();
+    }
+}
+
+async function playNextChunk() {
+    if (!isSpeaking || speechQueue.length === 0) {
+        isSpeaking = false;
+        animateMouth(false);
+        return;
     }
 
+    const chunk = speechQueue.shift();
+    
     try {
         const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: 'canopylabs/orpheus-v1-english',
-                input: speechText,
+                input: chunk,
                 voice: 'diana',
                 response_format: 'wav'
             })
         });
 
-        if (!response.ok) {
-            const err = await response.text();
-            alert("Groq TTS Error: " + err);
-            throw new Error('TTS Network error');
-        }
+        if (!response.ok) throw new Error('TTS Network error');
 
         const audioBlob = await response.blob();
         
@@ -62,18 +89,27 @@ async function playGroqTTS(text) {
         reader.onloadend = () => {
             ttsAudio.src = reader.result;
             ttsAudio.play().catch(e => {
-                alert("Android Playback Error: " + e.message);
+                console.error("Playback error:", e);
+                isSpeaking = false;
                 animateMouth(false);
             });
         };
     } catch (error) {
         console.error("TTS Error:", error);
+        isSpeaking = false;
         animateMouth(false);
     }
 }
 
-ttsAudio.onended = () => { animateMouth(false); };
-ttsAudio.onerror = () => { animateMouth(false); };
+// When a chunk finishes playing, play the next one
+ttsAudio.onended = () => {
+    if (isSpeaking) playNextChunk();
+    else animateMouth(false);
+};
+ttsAudio.onerror = () => {
+    isSpeaking = false;
+    animateMouth(false);
+};
 
 // --- APP INITIALIZATION ---
 function checkAppState() {
@@ -314,6 +350,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
 
         if (aiResponse.toLowerCase().includes("correct") || aiResponse.toLowerCase().includes("great job")) addXP(15);
 
+        // Start speaking the full text using the queue
         playGroqTTS(aiResponse);
 
     } catch (e) {
@@ -337,7 +374,16 @@ sendBtn.addEventListener('click', () => handleSend());
 userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
 document.getElementById('quiz-btn').addEventListener('click', () => { currentMode = 'quiz'; handleSend("Quiz me."); });
 document.getElementById('feynman-btn').addEventListener('click', () => { currentMode = 'feynman'; handleSend("Let me teach you."); });
-document.getElementById('clear-chat').addEventListener('click', () => { if(confirm("Clear chat?")) { chatHistory = []; localStorage.removeItem('tutorHistory'); chatContainer.innerHTML = ''; } });
+document.getElementById('clear-chat').addEventListener('click', () => { 
+    if(confirm("Clear chat?")) { 
+        chatHistory = []; 
+        localStorage.removeItem('tutorHistory'); 
+        chatContainer.innerHTML = ''; 
+        ttsAudio.pause();
+        isSpeaking = false;
+        if(mouth) animateMouth(false);
+    } 
+});
 function resetApp() { if (confirm("Erase all data?")) { localStorage.clear(); location.reload(); } }
 
 checkAppState();
