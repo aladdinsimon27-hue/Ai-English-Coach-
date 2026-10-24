@@ -22,9 +22,9 @@ async function playGroqTTS(text) {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'playai-tts',
+                model: 'canopylabs/orpheus-v1-english',
                 input: text,
-                voice: 'Celeste-PlayAI',
+                voice: 'diana',
                 response_format: 'wav'
             })
         });
