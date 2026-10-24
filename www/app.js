@@ -1,4 +1,4 @@
-// AI EduSchool - Bulletproof Audio (Base64) & Exact Robot Model
+// AI EduSchool - Fixed TTS Limit & Mouth Animation
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -13,17 +13,37 @@ let currentMode = 'chat';
 let timerInterval = null, secondsElapsed = 0;
 let selectedTutor = 'Nova';
 
-// --- BULLETPROOF AUDIO ---
+// --- FIXED MOUTH ANIMATION (No more zombie loops) ---
+let isMouthMoving = false;
+function animateMouth(isSpeaking) {
+    isMouthMoving = isSpeaking;
+    if (isSpeaking) {
+        mouth.scale.y = Math.random() * 2.5 + 0.5;
+        setTimeout(() => {
+            if (isMouthMoving) animateMouth(true);
+        }, 100);
+    } else {
+        mouth.scale.y = 1;
+    }
+}
+
+// --- FIXED AUDIO (Truncates text to prevent 4000 char error) ---
 async function playGroqTTS(text) {
-    if (mouth) animateMouth(true);
+    animateMouth(true);
     
+    // TRUNCATE TEXT IF OVER 3900 CHARACTERS
+    let speechText = text;
+    if (speechText.length > 3900) {
+        speechText = speechText.substring(0, 3900) + "...";
+    }
+
     try {
         const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: 'canopylabs/orpheus-v1-english',
-                input: text,
+                input: speechText,
                 voice: 'diana',
                 response_format: 'wav'
             })
@@ -31,39 +51,29 @@ async function playGroqTTS(text) {
 
         if (!response.ok) {
             const err = await response.text();
-            alert("Groq TTS Error: " + err); // SHOW ERROR ON SCREEN
+            alert("Groq TTS Error: " + err);
             throw new Error('TTS Network error');
         }
 
         const audioBlob = await response.blob();
         
-        // CONVERT BLOB TO BASE64 (Fixes Android WebView block)
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
-            ttsAudio.src = reader.result; // Play Base64 directly
+            ttsAudio.src = reader.result;
             ttsAudio.play().catch(e => {
                 alert("Android Playback Error: " + e.message);
-                if (mouth) animateMouth(false);
+                animateMouth(false);
             });
         };
     } catch (error) {
         console.error("TTS Error:", error);
-        if (mouth) animateMouth(false);
+        animateMouth(false);
     }
 }
 
-ttsAudio.onended = () => { if (mouth) animateMouth(false); };
-ttsAudio.onerror = () => { if (mouth) animateMouth(false); };
-
-function animateMouth(isSpeaking) {
-    if (isSpeaking) {
-        mouth.scale.y = Math.random() * 2.5 + 0.5;
-        setTimeout(() => animateMouth(isSpeaking), 100);
-    } else {
-        mouth.scale.y = 1;
-    }
-}
+ttsAudio.onended = () => { animateMouth(false); };
+ttsAudio.onerror = () => { animateMouth(false); };
 
 // --- APP INITIALIZATION ---
 function checkAppState() {
@@ -140,9 +150,8 @@ function startTimer() {
     }, 1000);
 }
 
-// --- 3D ROBOT (EXACT MATCH TO YOUR IMAGE) ---
+// --- 3D ROBOT ---
 let scene, camera, renderer, robotGroup, head, leftEye, rightEye, mouth, leftArm, rightArm, clock = new THREE.Clock();
-
 function init3DRobot() {
     const canvas = document.getElementById('robot-canvas');
     const container = document.getElementById('robot-container');
@@ -162,33 +171,26 @@ function init3DRobot() {
     const greyMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.4, metalness: 0.6 });
     const cyanGlow = new THREE.MeshBasicMaterial({ color: 0x00ffff });
 
-    // HEAD
     head = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), whiteMat);
     head.scale.set(1.2, 1, 0.8); head.position.y = 2.5; robotGroup.add(head);
     
-    // SCREEN FACE
     const screen = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 0.1), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8 }));
     screen.position.set(0, 2.5, 0.9); robotGroup.add(screen);
 
-    // EYES
     leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), cyanGlow); leftEye.scale.set(1, 1.5, 0.2); leftEye.position.set(-0.4, 2.6, 0.96); robotGroup.add(leftEye);
     rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), cyanGlow); rightEye.scale.set(1, 1.5, 0.2); rightEye.position.set(0.4, 2.6, 0.96); robotGroup.add(rightEye);
 
-    // MOUTH
     mouth = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.05, 8, 16, Math.PI), cyanGlow);
     mouth.rotation.x = Math.PI; mouth.position.set(0, 2.35, 0.96); robotGroup.add(mouth);
 
-    // BODY
     const body = new THREE.Mesh(new THREE.CylinderGeometry(1, 0.7, 1.8, 32), whiteMat);
     body.position.y = 1; robotGroup.add(body);
 
-    // CHEST
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.05, 16, 32), greyMat);
     ring.position.set(0, 1.2, 0.95); robotGroup.add(ring);
     const chestGlow = new THREE.Mesh(new THREE.CircleGeometry(0.15, 32), cyanGlow);
     chestGlow.position.set(0, 1.2, 0.95); robotGroup.add(chestGlow);
 
-    // ARMS
     const armGeo = new THREE.CylinderGeometry(0.15, 0.15, 1.2, 16);
     const jointGeo = new THREE.SphereGeometry(0.2, 16, 16);
     
@@ -204,7 +206,6 @@ function init3DRobot() {
     const rFore = new THREE.Mesh(armGeo, whiteMat); rFore.position.y = -0.6; rightArm.add(rFore);
     rightArm.position.set(1.1, 1.6, 0); rightArm.rotation.z = -0.4; robotGroup.add(rightArm);
 
-    // LEGS
     const legGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 16);
     const footGeo = new THREE.BoxGeometry(0.4, 0.2, 0.6);
     const leftLeg = new THREE.Mesh(legGeo, whiteMat); leftLeg.position.set(-0.4, -0.5, 0); robotGroup.add(leftLeg);
@@ -318,7 +319,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     } catch (e) {
         document.getElementById('think').remove();
         addMessageToUI("Network error.", 'ai');
-        if (mouth) animateMouth(false);
+        animateMouth(false);
     }
     isProcessing = false;
 }
