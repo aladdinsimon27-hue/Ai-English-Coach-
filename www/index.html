@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Hidden audio element to unlock WebView autoplay -->
     <audio id="tts-audio" style="display:none;"></audio>
 
     <div id="onboarding-screen" class="screen hidden">
@@ -97,18 +96,30 @@
         </div>
 
         <div id="profile-screen" class="tab-content hidden">
-            <header><h2>My Profile</h2></header>
+            <header><h2>My Profile & Settings</h2></header>
             <div class="profile-card">
                 <p><strong>Name:</strong> <span id="prof-name"></span></p>
                 <p><strong>Grade:</strong> <span id="prof-grade"></span></p>
                 <p><strong>Curriculum:</strong> <span id="prof-curr"></span></p>
                 <p><strong>Tutor:</strong> <span id="prof-tutor"></span></p>
             </div>
+            
+            <!-- NEW: VOICE SELECTION -->
+            <div class="memory-card">
+                <h3>🎙️ Voice Settings</h3>
+                <select id="voice-selector" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:white; border:1px solid var(--border); margin-top:10px;">
+                    <option value="diana">Diana (Clear & Friendly)</option>
+                    <option value="hannah">Hannah (Warm & Calm)</option>
+                    <option value="austin">Austin (Deep & Authoritative)</option>
+                    <option value="daniel">Daniel (Energetic)</option>
+                    <option value="troy">Troy (Professional)</option>
+                </select>
+            </div>
+
             <div class="memory-card">
                 <h3>🧠 AI Memory & Instructions</h3>
-                <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:10px;">Tell your AI tutor how you learn best.</p>
-                <textarea id="ai-memory-input" placeholder="Type your instructions here..."></textarea>
-                <button class="primary-btn" style="margin-top:10px; padding:10px;" onclick="saveMemoryInstructions()">Save Instructions</button>
+                <textarea id="ai-memory-input" placeholder="Tell your AI tutor how you learn best..."></textarea>
+                <button class="primary-btn" style="margin-top:10px; padding:10px;" onclick="saveSettings()">Save Settings</button>
             </div>
             <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
         </div>
