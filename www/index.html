@@ -9,6 +9,7 @@
 <body>
     <audio id="tts-audio" style="display:none;"></audio>
 
+    <!-- ONBOARDING -->
     <div id="onboarding-screen" class="screen hidden">
         <div class="onboarding-container">
             <h1>Welcome to AI EduSchool</h1>
@@ -27,17 +28,14 @@
                 <option value="Ethiopian National Curriculum">Ethiopian National Curriculum</option>
                 <option value="International (IGCSE/IB)">International (IGCSE/IB)</option>
             </select>
-            <label>Choose your AI Tutor Persona:</label>
-            <div class="tutor-select-grid">
-                <div class="tutor-opt" onclick="selectOnboardTutor('Nova', this)">🤖 Nova (Friendly)</div>
-                <div class="tutor-opt" onclick="selectOnboardTutor('Atlas', this)">🧑‍🏫 Atlas (Strict)</div>
-                <div class="tutor-opt" onclick="selectOnboardTutor('Pixel', this)">🎨 Pixel (Funny)</div>
-            </div>
             <button class="primary-btn" onclick="finishOnboarding()">Create My School</button>
         </div>
     </div>
 
+    <!-- MAIN APP SHELL -->
     <div id="app-shell" class="screen hidden">
+        
+        <!-- DASHBOARD -->
         <div id="dashboard-screen" class="tab-content">
             <header class="dash-header">
                 <div>
@@ -52,7 +50,7 @@
             </div>
             <h3>My Subjects</h3>
             <div class="subjects-grid">
-                <div class="subject-card" onclick="openTutor('Mathematics')">📐 Math</div>
+                <div class="subject-card" onclick="openTutor('Math')">📐 Math</div>
                 <div class="subject-card" onclick="openTutor('Physics')">🔭 Physics</div>
                 <div class="subject-card" onclick="openTutor('Chemistry')">🧪 Chemistry</div>
                 <div class="subject-card" onclick="openTutor('Biology')">🧬 Biology</div>
@@ -61,82 +59,96 @@
             </div>
         </div>
 
+        <!-- TUTOR CHAT (The New Master Interface) -->
         <div id="tutor-screen" class="tab-content hidden">
             <header class="tutor-header">
                 <button class="back-btn" onclick="switchTab('dashboard-screen')">❮</button>
-                <div id="current-subject-title">Select a Subject</div>
+                <div class="header-title">
+                    <h2>Ask Edu For Knowledge</h2>
+                    <span id="current-subject-title">General</span>
+                </div>
                 <div class="header-controls">
-                    <button id="stop-voice-btn" class="stop-btn hidden" onclick="stopVoice()">🛑 Stop</button>
-                    <div id="study-timer">⏱️ 00:00:00</div>
+                    <button id="stop-voice-btn" class="stop-btn hidden" onclick="stopVoice()">🛑</button>
+                    <div id="study-timer">⏱️ 00:00</div>
                 </div>
             </header>
-            <div id="robot-container">
-                <canvas id="robot-canvas"></canvas>
-                <div id="robot-name-badge">Nova</div>
-            </div>
-            <div id="chat-actions">
-                <button id="quiz-btn" class="action-btn">🧠 Quiz</button>
-                <button id="feynman-btn" class="action-btn">🧑‍🏫 Feynman</button>
-                <button id="image-btn" class="action-btn" onclick="document.getElementById('image-upload').click()">📸 Photo</button>
-                <button id="file-btn" class="action-btn" onclick="document.getElementById('file-upload').click()">📎 Text</button>
-                <button id="pdf-btn" class="action-btn" onclick="document.getElementById('pdf-upload').click()">📄 PDF</button>
-                <button id="clear-chat" class="action-btn" style="color:#ef4444;">Reset</button>
-            </div>
+
+            <main id="chat-container"></main>
+
+            <!-- INPUT BAR WITH + MENU -->
+            <footer class="chat-footer">
+                <div id="plus-menu" class="plus-menu hidden">
+                    <button onclick="triggerUpload('image-upload')">📸 Camera</button>
+                    <button onclick="triggerUpload('file-upload')">📎 File</button>
+                    <button id="think-harder-btn" onclick="toggleThinkHarder()">🧠 Think Harder</button>
+                    <button id="quiz-btn" onclick="handleQuickAction('quiz')">📝 Quiz Me</button>
+                    <button id="feynman-btn" onclick="handleQuickAction('feynman')">🧑‍🏫 Feynman</button>
+                    <button id="notes-btn" onclick="handleQuickAction('notes')">📒 Make Notes</button>
+                </div>
+                
+                <div class="input-wrapper">
+                    <button id="plus-toggle" class="plus-btn" onclick="toggleMenu()">+</button>
+                    <input type="text" id="user-input" placeholder="Ask anything..." autocomplete="off">
+                    <button id="mic-btn" class="mic-btn" onclick="alert('Voice input coming soon!')">🎙️</button>
+                    <button id="send-btn" class="round-btn">➤</button>
+                </div>
+            </footer>
+            
+            <!-- Hidden Inputs -->
             <input type="file" id="image-upload" accept="image/*" style="display:none;">
             <input type="file" id="file-upload" accept=".txt" style="display:none;">
-            <input type="file" id="pdf-upload" accept=".pdf" style="display:none;">
-
-            <main id="chat-container">
-                <div class="message ai-message">Welcome to class! Select a subject or upload an image of a problem to begin.</div>
-            </main>
-            <footer class="chat-footer">
-                <input type="text" id="user-input" placeholder="Ask your tutor..." autocomplete="off">
-                <button id="send-btn" class="round-btn">➤</button>
-            </footer>
         </div>
 
+        <!-- PLANNER -->
         <div id="planner-screen" class="tab-content hidden">
             <header><h2>My Study Planner</h2></header>
             <div class="placeholder-content"><p>📅 Your personalized AI study schedule will appear here.</p></div>
         </div>
 
+        <!-- PROFILE -->
         <div id="profile-screen" class="tab-content hidden">
             <header><h2>My Profile & Settings</h2></header>
             <div class="profile-card">
                 <p><strong>Name:</strong> <span id="prof-name"></span></p>
                 <p><strong>Grade:</strong> <span id="prof-grade"></span></p>
-                <p><strong>Curriculum:</strong> <span id="prof-curr"></span></p>
-                <p><strong>Tutor:</strong> <span id="prof-tutor"></span></p>
+                <p><strong>Tutor Persona:</strong> <span id="prof-tutor"></span></p>
             </div>
             
+            <div class="memory-card">
+                <h3>🤖 Tutor Persona</h3>
+                <select id="tutor-selector" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:white; border:1px solid var(--border); margin-top:10px;">
+                    <option value="Nova">Nova (Friendly & Patient)</option>
+                    <option value="Atlas">Atlas (Strict & Socratic)</option>
+                    <option value="Pixel">Pixel (Funny & Relatable)</option>
+                </select>
+            </div>
+
             <div class="memory-card">
                 <h3>🎙️ Voice Settings</h3>
                 <select id="voice-selector" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:white; border:1px solid var(--border); margin-top:10px;">
                     <option value="diana">Diana (Clear & Friendly)</option>
                     <option value="hannah">Hannah (Warm & Calm)</option>
                     <option value="austin">Austin (Deep & Authoritative)</option>
-                    <option value="daniel">Daniel (Energetic)</option>
-                    <option value="troy">Troy (Professional)</option>
                 </select>
             </div>
 
             <div class="memory-card">
-                <h3>🧠 AI Memory & Instructions</h3>
-                <textarea id="ai-memory-input" placeholder="Tell your AI tutor how you learn best..."></textarea>
-                <button class="primary-btn" style="margin-top:10px; padding:10px;" onclick="saveSettings()">Save Settings</button>
+                <h3>🧠 AI Memory</h3>
+                <textarea id="ai-memory-input" placeholder="e.g., I struggle with Algebra..."></textarea>
             </div>
+            <button class="primary-btn" style="margin: 20px; width: calc(100% - 40px);" onclick="saveSettings()">Save Settings</button>
             <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
         </div>
 
+        <!-- BOTTOM NAVIGATION -->
         <nav class="bottom-nav">
-            <button onclick="switchTab('dashboard-screen')">🏠 Home</button>
-            <button onclick="switchTab('tutor-screen')">🧑‍🏫 Tutor</button>
-            <button onclick="switchTab('planner-screen')">📅 Planner</button>
-            <button onclick="switchTab('profile-screen')">⚙️ Profile</button>
+            <button id="nav-home" onclick="switchTab('dashboard-screen')">🏠 Home</button>
+            <button id="nav-tutor" onclick="switchTab('tutor-screen')">🧑‍🏫 Tutor</button>
+            <button id="nav-planner" onclick="switchTab('planner-screen')">📅 Planner</button>
+            <button id="nav-profile" onclick="switchTab('profile-screen')">⚙️ Profile</button>
         </nav>
     </div>
 
-    <script src="three.min.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>

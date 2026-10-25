@@ -1,4 +1,4 @@
-// AI EduSchool - Professional Markdown, Fast TTS, Stop Button, PDF/Video support
+// AI EduSchool - New Chat UI, Subject Separation, Plus Menu
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -6,138 +6,101 @@ const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const ttsAudio = document.getElementById('tts-audio');
 const stopVoiceBtn = document.getElementById('stop-voice-btn');
+const plusMenu = document.getElementById('plus-menu');
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
-let chatHistory = JSON.parse(localStorage.getItem('tutorHistory')) || [];
+let currentSubject = 'General';
+let chatHistory = [];
 let isProcessing = false;
-let currentMode = 'chat';
+let isThinkHarder = false;
 let timerInterval = null, secondsElapsed = 0;
-let selectedTutor = 'Nova';
-let animationFrameId = null;
+
+// --- SUBJECT-SPECIFIC HISTORY ---
+function loadHistoryForSubject(subject) {
+    currentSubject = subject;
+    chatHistory = JSON.parse(localStorage.getItem(`tutorHistory_${subject}`)) || [];
+    renderHistory();
+}
+function saveHistory() {
+    localStorage.setItem(`tutorHistory_${currentSubject}`, JSON.stringify(chatHistory));
+}
+
+// --- MENU & UI ---
+function toggleMenu() {
+    plusMenu.classList.toggle('hidden');
+}
+function triggerUpload(id) {
+    document.getElementById(id).click();
+    toggleMenu();
+}
+function toggleThinkHarder() {
+    isThinkHarder = !isThinkHarder;
+    const btn = document.getElementById('think-harder-btn');
+    if (isThinkHarder) {
+        btn.classList.add('active');
+        btn.textContent = '🧠 Think Harder (ON)';
+        alert("Deep Reasoning mode activated. The AI will think longer for complex problems.");
+    } else {
+        btn.classList.remove('active');
+        btn.textContent = '🧠 Think Harder';
+    }
+    toggleMenu();
+}
 
 // --- MARKDOWN PARSER ---
 function parseMarkdown(text) {
     let html = text
-        // Convert LaTeX to readable text (Basic)
         .replace(/\\\((.*?)\\\)/g, '<span class="math-block">$1</span>')
         .replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '($1 / $2)')
-        .replace(/\^2/g, '²')
-        .replace(/\^3/g, '³')
         .replace(/\\Delta/g, 'Δ')
-        // Standard Markdown
         .replace(/^### (.*$)/gim, '<h3>$1</h3>')
         .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
-        .replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>')
-        // Links & Images
         .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
+        .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
         .replace(/\n/g, '<br>');
-    
     html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
     return html;
 }
 
-// --- FAST TTS ENGINE ---
+// --- FAST TTS ---
 let speechQueue = [];
 let isSpeaking = false;
-
-function animateMouth(moving) {
-    if (moving) {
-        if(mouth) mouth.scale.y = Math.random() * 2.5 + 0.5;
-        if (isSpeaking) setTimeout(() => animateMouth(true), 100);
-    } else {
-        if(mouth) mouth.scale.y = 1;
-    }
-}
-
 function cleanTextForTTS(text) {
-    // Strip LaTeX and Markdown completely for speech
-    return text
-        .replace(/\\\((.*?)\\\)/g, '$1') // remove \( \)
-        .replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '$1 over $2')
-        .replace(/\^2/g, ' squared ')
-        .replace(/\^3/g, ' cubed ')
-        .replace(/\\Delta/g, ' Delta ')
-        .replace(/[*#_|>]/g, '') // remove markdown symbols
-        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // strip links but keep text
-        .replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    return text.replace(/\\\((.*?)\\\)/g, '$1').replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '$1 over $2').replace(/[*#_|>]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
 }
-
 function splitTextIntoChunks(text) {
-    let cleanText = cleanTextForTTS(text);
-    let sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
-    let chunks = [];
-    let currentChunk = "";
-
-    sentences.forEach(sentence => {
-        if ((currentChunk + sentence).length < 400) { // Chunk size 400 for speed
-            currentChunk += sentence + " ";
-        } else {
-            if (currentChunk) chunks.push(currentChunk.trim());
-            currentChunk = sentence + " ";
-        }
+    let sentences = cleanTextForTTS(text).match(/[^.!?]+[.!?]+/g) || [cleanTextForTTS(text)];
+    let chunks = [], currentChunk = "";
+    sentences.forEach(s => {
+        if ((currentChunk + s).length < 400) currentChunk += s + " ";
+        else { if (currentChunk) chunks.push(currentChunk.trim()); currentChunk = s + " "; }
     });
     if (currentChunk) chunks.push(currentChunk.trim());
     return chunks;
 }
-
 async function playGroqTTS(text) {
-    ttsAudio.pause();
-    speechQueue = splitTextIntoChunks(text);
-    
-    if (speechQueue.length > 0) {
-        isSpeaking = true;
-        stopVoiceBtn.classList.remove('hidden');
-        animateMouth(true);
-        playNextChunk();
-    }
+    ttsAudio.pause(); speechQueue = splitTextIntoChunks(text);
+    if (speechQueue.length > 0) { isSpeaking = true; stopVoiceBtn.classList.remove('hidden'); playNextChunk(); }
 }
-
-function stopVoice() {
-    isSpeaking = false;
-    speechQueue = [];
-    ttsAudio.pause();
-    stopVoiceBtn.classList.add('hidden');
-    animateMouth(false);
-}
-
+function stopVoice() { isSpeaking = false; speechQueue = []; ttsAudio.pause(); stopVoiceBtn.classList.add('hidden'); }
 async function playNextChunk() {
-    if (!isSpeaking || speechQueue.length === 0) {
-        stopVoice();
-        return;
-    }
-
+    if (!isSpeaking || speechQueue.length === 0) { stopVoice(); return; }
     const chunk = speechQueue.shift();
     const voice = profile.voice || 'diana';
-    
     try {
-        const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+        const res = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+            method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: 'canopylabs/orpheus-v1-english', input: chunk, voice: voice, response_format: 'wav' })
         });
-
-        if (!response.ok) throw new Error('TTS Network error');
-        const audioBlob = await response.blob();
-        
+        if (!res.ok) throw new Error('TTS Error');
+        const audioBlob = await res.blob();
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-            if(!isSpeaking) return; // Double check if stopped during fetch
-            ttsAudio.src = reader.result;
-            ttsAudio.play().catch(e => { stopVoice(); });
-        };
-    } catch (error) {
-        stopVoice();
-    }
+        reader.onloadend = () => { if(isSpeaking) { ttsAudio.src = reader.result; ttsAudio.play().catch(stopVoice); } };
+    } catch (error) { stopVoice(); }
 }
-
-ttsAudio.onended = () => { if (isSpeaking) playNextChunk(); else animateMouth(false); };
-ttsAudio.onerror = () => { stopVoice(); };
+ttsAudio.onended = () => { if (isSpeaking) playNextChunk(); };
 
 // --- APP INITIALIZATION ---
 function checkAppState() {
@@ -147,26 +110,19 @@ function checkAppState() {
     } else {
         document.getElementById('onboarding-screen').classList.add('hidden');
         document.getElementById('app-shell').classList.remove('hidden');
-        loadDashboard();
-        switchTab('dashboard-screen');
+        loadDashboard(); switchTab('dashboard-screen');
     }
 }
 function finishOnboarding() {
     const name = document.getElementById('onboard-name').value.trim() || 'Student';
-    const grade = document.getElementById('onboard-grade').value;
-    const curriculum = document.getElementById('onboard-curriculum').value;
-    profile = { name, grade, curriculum, tutor: selectedTutor, voice: 'diana', xp: 0, level: 1, memory: '' };
+    profile = { name, grade: document.getElementById('onboard-grade').value, curriculum: document.getElementById('onboard-curriculum').value, tutor: 'Nova', voice: 'diana', xp: 0, level: 1, memory: '' };
     localStorage.setItem('eduProfile', JSON.stringify(profile));
     checkAppState();
-}
-function selectOnboardTutor(name, el) {
-    document.querySelectorAll('.tutor-opt').forEach(e => e.classList.remove('selected'));
-    el.classList.add('selected');
-    selectedTutor = name;
 }
 function saveSettings() {
     profile.memory = document.getElementById('ai-memory-input').value.trim();
     profile.voice = document.getElementById('voice-selector').value;
+    profile.tutor = document.getElementById('tutor-selector').value;
     localStorage.setItem('eduProfile', JSON.stringify(profile));
     alert("Settings Saved!");
 }
@@ -174,13 +130,12 @@ function loadDashboard() {
     document.getElementById('dash-name').textContent = profile.name;
     document.getElementById('dash-context').textContent = `Grade ${profile.grade} • ${profile.curriculum}`;
     document.getElementById('dash-level').textContent = profile.level;
-    document.getElementById('robot-name-badge').textContent = profile.tutor;
     document.getElementById('prof-name').textContent = profile.name;
     document.getElementById('prof-grade').textContent = profile.grade;
-    document.getElementById('prof-curr').textContent = profile.curriculum;
     document.getElementById('prof-tutor').textContent = profile.tutor;
     document.getElementById('ai-memory-input').value = profile.memory || '';
     document.getElementById('voice-selector').value = profile.voice || 'diana';
+    document.getElementById('tutor-selector').value = profile.tutor || 'Nova';
     updateXPUI();
 }
 function updateXPUI() {
@@ -191,188 +146,113 @@ function addXP(amount) {
     if (!profile) return;
     profile.xp += amount;
     if (profile.xp >= profile.level * 100) { profile.level++; profile.xp = 0; alert(`🎉 LEVEL UP! Level ${profile.level}.`); }
-    localStorage.setItem('eduProfile', JSON.stringify(profile));
-    loadDashboard();
+    localStorage.setItem('eduProfile', JSON.stringify(profile)); loadDashboard();
 }
+
+// --- NAVIGATION ---
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
-    if (tabId === 'tutor-screen') { 
-        startTimer(); 
-        if (!renderer) init3DRobot(); 
-    } else { 
-        clearInterval(timerInterval); 
-        stopVoice(); // Stop speaking if user leaves
-    }
+    
+    // Update active bottom nav
+    document.querySelectorAll('.bottom-nav button').forEach(b => b.style.color = '#94a3b8');
+    if(tabId === 'dashboard-screen') document.getElementById('nav-home').style.color = '#3b82f6';
+    if(tabId === 'tutor-screen') document.getElementById('nav-tutor').style.color = '#3b82f6';
+    if(tabId === 'planner-screen') document.getElementById('nav-planner').style.color = '#3b82f6';
+    if(tabId === 'profile-screen') document.getElementById('nav-profile').style.color = '#3b82f6';
+
+    if (tabId === 'tutor-screen') { startTimer(); } 
+    else { clearInterval(timerInterval); stopVoice(); }
 }
+
 function openTutor(subject) {
+    loadHistoryForSubject(subject);
     document.getElementById('current-subject-title').textContent = subject;
     switchTab('tutor-screen');
-    handleSend(`Let's study ${subject} for Grade ${profile.grade}. Introduce the topic we should start with.`);
+    // If chat is empty, start the lesson
+    if (chatHistory.length === 0) {
+        handleSend(`Let's study ${subject} for Grade ${profile.grade}. Introduce the topic we should start with.`);
+    }
 }
 function startTimer() {
     if (timerInterval) clearInterval(timerInterval);
     secondsElapsed = 0;
     timerInterval = setInterval(() => {
         secondsElapsed++;
-        const h = String(Math.floor(secondsElapsed / 3600)).padStart(2, '0');
-        const m = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(2, '0');
+        const m = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
         const s = String(secondsElapsed % 60).padStart(2, '0');
-        document.getElementById('study-timer').textContent = `⏱️ ${h}:${m}:${s}`;
+        document.getElementById('study-timer').textContent = `⏱️ ${m}:${s}`;
     }, 1000);
 }
 
-// --- 3D ROBOT ---
-let scene, camera, renderer, robotGroup, head, leftEye, rightEye, mouth, leftArm, rightArm, clock = new THREE.Clock();
-function init3DRobot() {
-    const canvas = document.getElementById('robot-canvas');
-    const container = document.getElementById('robot-container');
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 1, 9);
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.9); dir.position.set(5, 10, 7); scene.add(dir);
-
-    robotGroup = new THREE.Group();
-    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.1, metalness: 0.2 });
-    const darkMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.8 });
-    const cyanGlow = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-
-    head = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 1.2), whiteMat);
-    head.position.y = 2.5; robotGroup.add(head);
-    
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 0.1), darkMat);
-    visor.position.set(0, 2.5, 0.6); robotGroup.add(visor);
-
-    leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16, 0, Math.PI), cyanGlow); leftEye.rotation.x = Math.PI/2; leftEye.position.set(-0.4, 2.6, 0.66); robotGroup.add(leftEye);
-    rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16, 0, Math.PI), cyanGlow); rightEye.rotation.x = Math.PI/2; rightEye.position.set(0.4, 2.6, 0.66); robotGroup.add(rightEye);
-
-    mouth = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.06, 8, 16, Math.PI), cyanGlow);
-    mouth.rotation.x = Math.PI; mouth.position.set(0, 2.35, 0.66); robotGroup.add(mouth);
-
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 1.6, 32), whiteMat);
-    body.position.y = 0.9; robotGroup.add(body);
-
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.08, 16, 32), darkMat);
-    ring.position.set(0, 1.1, 1.05); robotGroup.add(ring);
-    const chestGlow = new THREE.Mesh(new THREE.CircleGeometry(0.2, 32), cyanGlow);
-    chestGlow.position.set(0, 1.1, 1.06); robotGroup.add(chestGlow);
-
-    const armGeo = new THREE.CylinderGeometry(0.15, 0.15, 1, 16);
-    const jointGeo = new THREE.SphereGeometry(0.2, 16, 16);
-    
-    leftArm = new THREE.Group();
-    const lUpper = new THREE.Mesh(armGeo, whiteMat); lUpper.position.y = 0.5; leftArm.add(lUpper);
-    const lJoint = new THREE.Mesh(jointGeo, darkMat); leftArm.add(lJoint);
-    const lFore = new THREE.Mesh(armGeo, whiteMat); lFore.position.y = -0.5; leftArm.add(lFore);
-    leftArm.position.set(-1.3, 1.4, 0); leftArm.rotation.z = 0.6; robotGroup.add(leftArm);
-
-    rightArm = new THREE.Group();
-    const rUpper = new THREE.Mesh(armGeo, whiteMat); rUpper.position.y = 0.5; rightArm.add(rUpper);
-    const rJoint = new THREE.Mesh(jointGeo, darkMat); rightArm.add(rJoint);
-    const rFore = new THREE.Mesh(armGeo, whiteMat); rFore.position.y = -0.5; rightArm.add(rFore);
-    rightArm.position.set(1.3, 1.4, 0); rightArm.rotation.z = -0.6; robotGroup.add(rightArm);
-
-    const legGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.2, 16);
-    const footGeo = new THREE.BoxGeometry(0.5, 0.3, 0.8);
-    const leftLeg = new THREE.Mesh(legGeo, whiteMat); leftLeg.position.set(-0.5, -0.4, 0); robotGroup.add(leftLeg);
-    const leftFoot = new THREE.Mesh(footGeo, whiteMat); leftFoot.position.set(-0.5, -1.1, 0.1); robotGroup.add(leftFoot);
-    const rightLeg = new THREE.Mesh(legGeo, whiteMat); rightLeg.position.set(0.5, -0.4, 0); robotGroup.add(rightLeg);
-    const rightFoot = new THREE.Mesh(footGeo, whiteMat); rightFoot.position.set(0.5, -1.1, 0.1); robotGroup.add(rightFoot);
-
-    scene.add(robotGroup);
-    animate3D();
-}
-
-function animate3D() {
-    animationFrameId = requestAnimationFrame(animate3D);
-    if (!robotGroup) return;
-    const time = clock.getElapsedTime();
-    robotGroup.position.y = Math.sin(time * 2) * 0.1;
-    head.rotation.y = Math.sin(time * 0.5) * 0.1;
-    
-    const blink = Math.sin(time * 3) > 0.95 ? 0.1 : 1;
-    leftEye.scale.y = blink; rightEye.scale.y = blink;
-    
-    if (Math.sin(time * 0.5) > 0.8) {
-        rightArm.rotation.z = -1.5 + Math.sin(time * 10) * 0.3;
+// --- RENDER & UI ---
+function renderHistory() {
+    chatContainer.innerHTML = '';
+    if (chatHistory.length === 0) {
+        chatContainer.innerHTML = `<div class="message ai-message">Hello! I am your ${currentSubject} tutor. Ask me a question, upload an image of a problem, or tap <b>+</b> for tools.</div>`;
     } else {
-        rightArm.rotation.z = -0.6;
+        chatHistory.forEach(msg => addMessageToUI(msg.text, msg.sender, msg.sender === 'ai'));
     }
-    
-    renderer.render(scene, camera);
+}
+function addMessageToUI(text, sender, isMarkdown = false) {
+    const div = document.createElement('div');
+    div.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+    if (isMarkdown && sender === 'ai') div.innerHTML = parseMarkdown(text);
+    else div.textContent = text;
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// --- FILE / IMAGE UPLOAD ---
+// --- UPLOADS ---
 document.getElementById('file-upload').addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+    const file = event.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => handleSend(`I have uploaded a text file. Please teach me this material: \n\n${e.target.result}`);
     reader.readAsText(file);
 });
 document.getElementById('image-upload').addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+    const file = event.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => handleSend("I have uploaded an image of a problem. Please read it carefully and solve it step-by-step.", e.target.result);
     reader.readAsDataURL(file);
 });
-document.getElementById('pdf-upload').addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    // Placeholder for PDF parsing logic
-    alert("PDF upload initiated. For this version, please convert PDF to text or image for the AI to read it perfectly.");
-});
+
+function handleQuickAction(action) {
+    toggleMenu(); // close menu
+    if (action === 'quiz') handleSend("Quiz me on this subject. Give me 3 multiple-choice questions.");
+    if (action === 'feynman') handleSend("Let's use the Feynman technique. I will explain the current topic to you, and you act like a confused student asking me questions.");
+    if (action === 'notes') handleSend("Generate a structured study note from our conversation so far.");
+}
 
 // --- AI BRAIN ---
 async function handleSend(customPrompt = null, imageBase64 = null) {
     if (isProcessing || !profile) return;
-    const text = customPrompt || userInput.value.trim();
-    if (!text) return;
-    isProcessing = true;
-    addXP(5);
-    stopVoice(); // Stop any ongoing speech when a new prompt is sent
+    const text = customPrompt || userInput.value.trim(); if (!text) return;
+    isProcessing = true; addXP(5); stopVoice();
+    plusMenu.classList.add('hidden'); // Close menu if open
 
     if (!customPrompt) {
-        addMessageToUI(text, 'user');
-        chatHistory.push({ text: text, sender: 'user' });
-        userInput.value = '';
-        localStorage.setItem('tutorHistory', JSON.stringify(chatHistory));
-    } else {
-        addMessageToUI(customPrompt, 'user');
-    }
+        addMessageToUI(text, 'user'); chatHistory.push({ text: text, sender: 'user' });
+        userInput.value = ''; saveHistory();
+    } else { addMessageToUI(customPrompt, 'user'); }
 
     const think = document.createElement('div');
-    think.className = 'message ai-message'; think.textContent = 'Analyzing...'; think.id = 'think';
+    think.className = 'message ai-message'; think.textContent = 'Thinking...'; think.id = 'think';
     chatContainer.appendChild(think); chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    let systemPrompt = `You are ${profile.tutor}, an expert AI tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: ${profile.tutor === 'Nova' ? 'friendly' : profile.tutor === 'Atlas' ? 'strict' : 'funny'}.`;
+    let systemPrompt = `You are ${profile.tutor}, an expert AI ${currentSubject} tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: ${profile.tutor === 'Nova' ? 'friendly' : profile.tutor === 'Atlas' ? 'strict' : 'funny'}.`;
     if (profile.memory) systemPrompt += ` \nCRITICAL STUDENT MEMORY: ${profile.memory}. Adapt your teaching to this.`;
     
-    // Strong Instructions for Markdown and Links
-    systemPrompt += ` \nFormat your response beautifully using Markdown (use ** for bold, ## for headers, and bullet points). 
-    If you mention a YouTube video, provide it as a markdown link like this: [Video Title](https://youtube.com/...).
-    Do not use complex LaTeX. Use plain text for math (e.g., 'x^2' or 'x squared').`;
-
-    if (currentMode === 'quiz') { systemPrompt += ` \nGenerate a 3-question quiz.`; currentMode = 'chat'; }
-    if (currentMode === 'feynman') { systemPrompt += ` \nAct confused. Let the student explain to you.`; currentMode = 'chat'; }
+    // Think Harder logic
+    if (isThinkHarder) systemPrompt += ` \nCRITICAL: This is a complex problem. Think step-by-step, verify your math/logic internally before answering, and provide a highly detailed, flawless explanation.`;
+    
+    systemPrompt += ` \nFormat your response beautifully using Markdown. Links for videos must use [Title](URL). Do not use complex LaTeX. Use plain text math (e.g., 'x^2').`;
 
     let messages = [{ role: 'system', content: systemPrompt }];
-    chatHistory.forEach(m => messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
+    chatHistory.slice(-10).forEach(m => messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
 
     if (imageBase64) {
-        messages.push({
-            role: 'user',
-            content: [
-                { type: "text", text: "Solve the problem in this image." },
-                { type: "image_url", image_url: { url: imageBase64 } }
-            ]
-        });
+        messages.push({ role: 'user', content: [{ type: "text", text: "Solve the problem in this image." }, { type: "image_url", image_url: { url: imageBase64 } }] });
     } else {
         messages.push({ role: 'user', content: text });
     }
@@ -381,8 +261,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
 
     try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: modelToUse, messages, temperature: 0.6, max_tokens: 2000 })
         });
 
@@ -393,44 +272,21 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
         const aiResponse = data.choices[0].message.content;
         
         addMessageToUI(aiResponse, 'ai', true);
-        chatHistory.push({ text: aiResponse, sender: 'ai' });
-        localStorage.setItem('tutorHistory', JSON.stringify(chatHistory));
+        chatHistory.push({ text: aiResponse, sender: 'ai' }); saveHistory();
 
         if (aiResponse.toLowerCase().includes("correct") || aiResponse.toLowerCase().includes("great job")) addXP(15);
-
         playGroqTTS(aiResponse);
 
     } catch (e) {
         document.getElementById('think').remove();
         addMessageToUI("Network error.", 'ai');
-        animateMouth(false);
     }
     isProcessing = false;
-}
-
-function addMessageToUI(text, sender, isMarkdown = false) {
-    const div = document.createElement('div');
-    div.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
-    if (isMarkdown && sender === 'ai') {
-        div.innerHTML = parseMarkdown(text);
-    } else {
-        div.textContent = text;
-    }
-    chatContainer.appendChild(div);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
 // --- EVENTS ---
 sendBtn.addEventListener('click', () => handleSend());
 userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
-document.getElementById('quiz-btn').addEventListener('click', () => { currentMode = 'quiz'; handleSend("Quiz me."); });
-document.getElementById('feynman-btn').addEventListener('click', () => { currentMode = 'feynman'; handleSend("Let me teach you."); });
-document.getElementById('clear-chat').addEventListener('click', () => { 
-    if(confirm("Clear chat?")) { 
-        chatHistory = []; localStorage.removeItem('tutorHistory'); chatContainer.innerHTML = ''; 
-        stopVoice();
-    } 
-});
 function resetApp() { if (confirm("Erase all data?")) { localStorage.clear(); location.reload(); } }
 
 checkAppState();
