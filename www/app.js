@@ -1,11 +1,10 @@
-// AI EduSchool - New Chat UI, Subject Separation, Plus Menu
+// AI EduSchool - Fixed Text Structure, Emojis, Model Rate Limit, and Modern UI
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const ttsAudio = document.getElementById('tts-audio');
-const stopVoiceBtn = document.getElementById('stop-voice-btn');
 const plusMenu = document.getElementById('plus-menu');
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
@@ -13,7 +12,6 @@ let currentSubject = 'General';
 let chatHistory = [];
 let isProcessing = false;
 let isThinkHarder = false;
-let timerInterval = null, secondsElapsed = 0;
 
 // --- SUBJECT-SPECIFIC HISTORY ---
 function loadHistoryForSubject(subject) {
@@ -38,11 +36,10 @@ function toggleThinkHarder() {
     const btn = document.getElementById('think-harder-btn');
     if (isThinkHarder) {
         btn.classList.add('active');
-        btn.textContent = '🧠 Think Harder (ON)';
-        alert("Deep Reasoning mode activated. The AI will think longer for complex problems.");
+        btn.innerHTML = '<span>🧠</span> Think Harder (ON)';
     } else {
         btn.classList.remove('active');
-        btn.textContent = '🧠 Think Harder';
+        btn.innerHTML = '<span>🧠</span> Think Harder';
     }
     toggleMenu();
 }
@@ -58,12 +55,13 @@ function parseMarkdown(text) {
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
         .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
+        .replace(/^\s*\*\s+(.*$)/gim, '<li>$1</li>')
         .replace(/\n/g, '<br>');
     html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
     return html;
 }
 
-// --- FAST TTS ---
+// --- FAST TTS (Kept from previous working version) ---
 let speechQueue = [];
 let isSpeaking = false;
 function cleanTextForTTS(text) {
@@ -81,9 +79,9 @@ function splitTextIntoChunks(text) {
 }
 async function playGroqTTS(text) {
     ttsAudio.pause(); speechQueue = splitTextIntoChunks(text);
-    if (speechQueue.length > 0) { isSpeaking = true; stopVoiceBtn.classList.remove('hidden'); playNextChunk(); }
+    if (speechQueue.length > 0) { isSpeaking = true; playNextChunk(); }
 }
-function stopVoice() { isSpeaking = false; speechQueue = []; ttsAudio.pause(); stopVoiceBtn.classList.add('hidden'); }
+function stopVoice() { isSpeaking = false; speechQueue = []; ttsAudio.pause(); }
 async function playNextChunk() {
     if (!isSpeaking || speechQueue.length === 0) { stopVoice(); return; }
     const chunk = speechQueue.shift();
@@ -154,35 +152,23 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
     
-    // Update active bottom nav
-    document.querySelectorAll('.bottom-nav button').forEach(b => b.style.color = '#94a3b8');
-    if(tabId === 'dashboard-screen') document.getElementById('nav-home').style.color = '#3b82f6';
-    if(tabId === 'tutor-screen') document.getElementById('nav-tutor').style.color = '#3b82f6';
-    if(tabId === 'planner-screen') document.getElementById('nav-planner').style.color = '#3b82f6';
-    if(tabId === 'profile-screen') document.getElementById('nav-profile').style.color = '#3b82f6';
+    // Update active nav styling
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    if(tabId === 'dashboard-screen') document.getElementById('nav-home').classList.add('active');
+    if(tabId === 'tutor-screen') document.getElementById('nav-tutor').classList.add('active');
+    if(tabId === 'planner-screen') document.getElementById('nav-planner').classList.add('active');
+    if(tabId === 'profile-screen') document.getElementById('nav-profile').classList.add('active');
 
-    if (tabId === 'tutor-screen') { startTimer(); } 
-    else { clearInterval(timerInterval); stopVoice(); }
+    if (tabId !== 'tutor-screen') { stopVoice(); }
 }
 
 function openTutor(subject) {
     loadHistoryForSubject(subject);
     document.getElementById('current-subject-title').textContent = subject;
     switchTab('tutor-screen');
-    // If chat is empty, start the lesson
     if (chatHistory.length === 0) {
         handleSend(`Let's study ${subject} for Grade ${profile.grade}. Introduce the topic we should start with.`);
     }
-}
-function startTimer() {
-    if (timerInterval) clearInterval(timerInterval);
-    secondsElapsed = 0;
-    timerInterval = setInterval(() => {
-        secondsElapsed++;
-        const m = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-        const s = String(secondsElapsed % 60).padStart(2, '0');
-        document.getElementById('study-timer').textContent = `⏱️ ${m}:${s}`;
-    }, 1000);
 }
 
 // --- RENDER & UI ---
@@ -203,7 +189,7 @@ function addMessageToUI(text, sender, isMarkdown = false) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// --- UPLOADS ---
+// --- UPLOADS & TOOLS ---
 document.getElementById('file-upload').addEventListener('change', (event) => {
     const file = event.target.files[0]; if (!file) return;
     const reader = new FileReader();
@@ -216,9 +202,8 @@ document.getElementById('image-upload').addEventListener('change', (event) => {
     reader.onload = (e) => handleSend("I have uploaded an image of a problem. Please read it carefully and solve it step-by-step.", e.target.result);
     reader.readAsDataURL(file);
 });
-
 function handleQuickAction(action) {
-    toggleMenu(); // close menu
+    toggleMenu();
     if (action === 'quiz') handleSend("Quiz me on this subject. Give me 3 multiple-choice questions.");
     if (action === 'feynman') handleSend("Let's use the Feynman technique. I will explain the current topic to you, and you act like a confused student asking me questions.");
     if (action === 'notes') handleSend("Generate a structured study note from our conversation so far.");
@@ -229,7 +214,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     if (isProcessing || !profile) return;
     const text = customPrompt || userInput.value.trim(); if (!text) return;
     isProcessing = true; addXP(5); stopVoice();
-    plusMenu.classList.add('hidden'); // Close menu if open
+    plusMenu.classList.add('hidden');
 
     if (!customPrompt) {
         addMessageToUI(text, 'user'); chatHistory.push({ text: text, sender: 'user' });
@@ -240,13 +225,19 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     think.className = 'message ai-message'; think.textContent = 'Thinking...'; think.id = 'think';
     chatContainer.appendChild(think); chatContainer.scrollTop = chatContainer.scrollHeight;
 
+    // STRICT INSTRUCTIONS FOR AI FORMATTING
     let systemPrompt = `You are ${profile.tutor}, an expert AI ${currentSubject} tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: ${profile.tutor === 'Nova' ? 'friendly' : profile.tutor === 'Atlas' ? 'strict' : 'funny'}.`;
     if (profile.memory) systemPrompt += ` \nCRITICAL STUDENT MEMORY: ${profile.memory}. Adapt your teaching to this.`;
     
-    // Think Harder logic
     if (isThinkHarder) systemPrompt += ` \nCRITICAL: This is a complex problem. Think step-by-step, verify your math/logic internally before answering, and provide a highly detailed, flawless explanation.`;
     
-    systemPrompt += ` \nFormat your response beautifully using Markdown. Links for videos must use [Title](URL). Do not use complex LaTeX. Use plain text math (e.g., 'x^2').`;
+    // FORBID TABLES AND DEMAND EMOJIS
+    systemPrompt += ` \nCRITICAL FORMATTING RULES:
+    1. NEVER use Markdown tables (no | character). Use bullet points instead.
+    2. Use bold text for key terms.
+    3. Include fun, relevant emojis in almost every paragraph to make it engaging.
+    4. Use plain text math (e.g., 'x^2', 'F = ma'). Do not use LaTeX.
+    5. If providing video links, use [Title](URL).`;
 
     let messages = [{ role: 'system', content: systemPrompt }];
     chatHistory.slice(-10).forEach(m => messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
@@ -257,12 +248,15 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
         messages.push({ role: 'user', content: text });
     }
 
-    const modelToUse = imageBase64 ? 'llama-3.2-11b-vision-instruct' : 'openai/gpt-oss-120b';
+    // USE LIGHTER MODEL UNLESS 'THINK HARDER' IS ON
+    let modelToUse = 'llama-3.1-8b-instant'; // 500k TPD limit, very fast
+    if (imageBase64) modelToUse = 'llama-3.2-11b-vision-instruct';
+    else if (isThinkHarder) modelToUse = 'openai/gpt-oss-120b'; // 200k TPD limit, very smart
 
     try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: modelToUse, messages, temperature: 0.6, max_tokens: 2000 })
+            body: JSON.stringify({ model: modelToUse, messages, temperature: 0.7, max_tokens: 2000 })
         });
 
         const data = await res.json();

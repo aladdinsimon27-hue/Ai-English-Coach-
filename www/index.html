@@ -9,7 +9,6 @@
 <body>
     <audio id="tts-audio" style="display:none;"></audio>
 
-    <!-- ONBOARDING -->
     <div id="onboarding-screen" class="screen hidden">
         <div class="onboarding-container">
             <h1>Welcome to AI EduSchool</h1>
@@ -32,10 +31,8 @@
         </div>
     </div>
 
-    <!-- MAIN APP SHELL -->
     <div id="app-shell" class="screen hidden">
         
-        <!-- DASHBOARD -->
         <div id="dashboard-screen" class="tab-content">
             <header class="dash-header">
                 <div>
@@ -59,53 +56,48 @@
             </div>
         </div>
 
-        <!-- TUTOR CHAT (The New Master Interface) -->
         <div id="tutor-screen" class="tab-content hidden">
+            <!-- Clean header, no timer, no red stop button -->
             <header class="tutor-header">
                 <button class="back-btn" onclick="switchTab('dashboard-screen')">❮</button>
                 <div class="header-title">
                     <h2>Ask Edu For Knowledge</h2>
                     <span id="current-subject-title">General</span>
                 </div>
-                <div class="header-controls">
-                    <button id="stop-voice-btn" class="stop-btn hidden" onclick="stopVoice()">🛑</button>
-                    <div id="study-timer">⏱️ 00:00</div>
-                </div>
+                <div style="width: 30px;"></div> <!-- Spacer for centering -->
             </header>
 
             <main id="chat-container"></main>
 
-            <!-- INPUT BAR WITH + MENU -->
             <footer class="chat-footer">
+                <!-- The + Menu Popup -->
                 <div id="plus-menu" class="plus-menu hidden">
-                    <button onclick="triggerUpload('image-upload')">📸 Camera</button>
-                    <button onclick="triggerUpload('file-upload')">📎 File</button>
-                    <button id="think-harder-btn" onclick="toggleThinkHarder()">🧠 Think Harder</button>
-                    <button id="quiz-btn" onclick="handleQuickAction('quiz')">📝 Quiz Me</button>
-                    <button id="feynman-btn" onclick="handleQuickAction('feynman')">🧑‍🏫 Feynman</button>
-                    <button id="notes-btn" onclick="handleQuickAction('notes')">📒 Make Notes</button>
+                    <button onclick="triggerUpload('image-upload')"><span>📸</span> Camera / Photos</button>
+                    <button onclick="triggerUpload('file-upload')"><span>📎</span> Upload File</button>
+                    <button id="think-harder-btn" onclick="toggleThinkHarder()"><span>🧠</span> Think Harder</button>
+                    <div class="divider"></div>
+                    <button id="quiz-btn" onclick="handleQuickAction('quiz')"><span>📝</span> Quiz Me</button>
+                    <button id="feynman-btn" onclick="handleQuickAction('feynman')"><span>🧑‍🏫</span> Feynman Mode</button>
+                    <button id="notes-btn" onclick="handleQuickAction('notes')"><span>📒</span> Make Notes</button>
                 </div>
                 
                 <div class="input-wrapper">
                     <button id="plus-toggle" class="plus-btn" onclick="toggleMenu()">+</button>
-                    <input type="text" id="user-input" placeholder="Ask anything..." autocomplete="off">
-                    <button id="mic-btn" class="mic-btn" onclick="alert('Voice input coming soon!')">🎙️</button>
+                    <input type="text" id="user-input" placeholder="Ask Edu anything..." autocomplete="off">
+                    <button id="mic-btn" class="mic-btn">🎙️</button>
                     <button id="send-btn" class="round-btn">➤</button>
                 </div>
             </footer>
             
-            <!-- Hidden Inputs -->
             <input type="file" id="image-upload" accept="image/*" style="display:none;">
             <input type="file" id="file-upload" accept=".txt" style="display:none;">
         </div>
 
-        <!-- PLANNER -->
         <div id="planner-screen" class="tab-content hidden">
             <header><h2>My Study Planner</h2></header>
             <div class="placeholder-content"><p>📅 Your personalized AI study schedule will appear here.</p></div>
         </div>
 
-        <!-- PROFILE -->
         <div id="profile-screen" class="tab-content hidden">
             <header><h2>My Profile & Settings</h2></header>
             <div class="profile-card">
@@ -122,7 +114,6 @@
                     <option value="Pixel">Pixel (Funny & Relatable)</option>
                 </select>
             </div>
-
             <div class="memory-card">
                 <h3>🎙️ Voice Settings</h3>
                 <select id="voice-selector" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:white; border:1px solid var(--border); margin-top:10px;">
@@ -131,7 +122,6 @@
                     <option value="austin">Austin (Deep & Authoritative)</option>
                 </select>
             </div>
-
             <div class="memory-card">
                 <h3>🧠 AI Memory</h3>
                 <textarea id="ai-memory-input" placeholder="e.g., I struggle with Algebra..."></textarea>
@@ -140,12 +130,20 @@
             <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
         </div>
 
-        <!-- BOTTOM NAVIGATION -->
+        <!-- NEW MODERN BOTTOM NAVIGATION -->
         <nav class="bottom-nav">
-            <button id="nav-home" onclick="switchTab('dashboard-screen')">🏠 Home</button>
-            <button id="nav-tutor" onclick="switchTab('tutor-screen')">🧑‍🏫 Tutor</button>
-            <button id="nav-planner" onclick="switchTab('planner-screen')">📅 Planner</button>
-            <button id="nav-profile" onclick="switchTab('profile-screen')">⚙️ Profile</button>
+            <button id="nav-home" class="nav-item active" onclick="switchTab('dashboard-screen')">
+                <div class="nav-icon">🏠</div><span>Home</span>
+            </button>
+            <button id="nav-tutor" class="nav-item" onclick="switchTab('tutor-screen')">
+                <div class="nav-icon">💬</div><span>Tutor</span>
+            </button>
+            <button id="nav-planner" class="nav-item" onclick="switchTab('planner-screen')">
+                <div class="nav-icon">📅</div><span>Planner</span>
+            </button>
+            <button id="nav-profile" class="nav-item" onclick="switchTab('profile-screen')">
+                <div class="nav-icon">⚙️</div><span>Profile</span>
+            </button>
         </nav>
     </div>
 
