@@ -1,10 +1,11 @@
-// AI EduSchool - Professional Markdown, Fast TTS, Voice Selector, Upgraded Robot
+// AI EduSchool - Professional Markdown, Fast TTS, Stop Button, PDF/Video support
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const ttsAudio = document.getElementById('tts-audio');
+const stopVoiceBtn = document.getElementById('stop-voice-btn');
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
 let chatHistory = JSON.parse(localStorage.getItem('tutorHistory')) || [];
@@ -12,10 +13,18 @@ let isProcessing = false;
 let currentMode = 'chat';
 let timerInterval = null, secondsElapsed = 0;
 let selectedTutor = 'Nova';
+let animationFrameId = null;
 
-// --- MARKDOWN PARSER (Makes text look professional) ---
+// --- MARKDOWN PARSER ---
 function parseMarkdown(text) {
     let html = text
+        // Convert LaTeX to readable text (Basic)
+        .replace(/\\\((.*?)\\\)/g, '<span class="math-block">$1</span>')
+        .replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '($1 / $2)')
+        .replace(/\^2/g, '²')
+        .replace(/\^3/g, '³')
+        .replace(/\\Delta/g, 'Δ')
+        // Standard Markdown
         .replace(/^### (.*$)/gim, '<h3>$1</h3>')
         .replace(/^## (.*$)/gim, '<h2>$1</h2>')
         .replace(/^# (.*$)/gim, '<h1>$1</h1>')
@@ -24,32 +33,40 @@ function parseMarkdown(text) {
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
         .replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>')
+        // Links & Images
+        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
         .replace(/\n/g, '<br>');
     
-    // Wrap lists
     html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
     return html;
 }
 
-// --- SMART AUDIO QUEUE (Faster playback) ---
+// --- FAST TTS ENGINE ---
 let speechQueue = [];
 let isSpeaking = false;
 
 function animateMouth(moving) {
     if (moving) {
-        mouth.scale.y = Math.random() * 2.5 + 0.5;
+        if(mouth) mouth.scale.y = Math.random() * 2.5 + 0.5;
         if (isSpeaking) setTimeout(() => animateMouth(true), 100);
     } else {
-        mouth.scale.y = 1;
+        if(mouth) mouth.scale.y = 1;
     }
 }
 
-// Strips markdown for TTS so she doesn't read symbols
 function cleanTextForTTS(text) {
-    return text.replace(/[*#_|>]/g, '').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    // Strip LaTeX and Markdown completely for speech
+    return text
+        .replace(/\\\((.*?)\\\)/g, '$1') // remove \( \)
+        .replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '$1 over $2')
+        .replace(/\^2/g, ' squared ')
+        .replace(/\^3/g, ' cubed ')
+        .replace(/\\Delta/g, ' Delta ')
+        .replace(/[*#_|>]/g, '') // remove markdown symbols
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // strip links but keep text
+        .replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-// Increased chunk size to ~600 chars for faster generation
 function splitTextIntoChunks(text) {
     let cleanText = cleanTextForTTS(text);
     let sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
@@ -57,7 +74,7 @@ function splitTextIntoChunks(text) {
     let currentChunk = "";
 
     sentences.forEach(sentence => {
-        if ((currentChunk + sentence).length < 600) {
+        if ((currentChunk + sentence).length < 400) { // Chunk size 400 for speed
             currentChunk += sentence + " ";
         } else {
             if (currentChunk) chunks.push(currentChunk.trim());
@@ -71,23 +88,31 @@ function splitTextIntoChunks(text) {
 async function playGroqTTS(text) {
     ttsAudio.pause();
     speechQueue = splitTextIntoChunks(text);
-    isSpeaking = true;
     
     if (speechQueue.length > 0) {
+        isSpeaking = true;
+        stopVoiceBtn.classList.remove('hidden');
         animateMouth(true);
         playNextChunk();
     }
 }
 
+function stopVoice() {
+    isSpeaking = false;
+    speechQueue = [];
+    ttsAudio.pause();
+    stopVoiceBtn.classList.add('hidden');
+    animateMouth(false);
+}
+
 async function playNextChunk() {
     if (!isSpeaking || speechQueue.length === 0) {
-        isSpeaking = false;
-        animateMouth(false);
+        stopVoice();
         return;
     }
 
     const chunk = speechQueue.shift();
-    const voice = profile.voice || 'diana'; // Use selected voice
+    const voice = profile.voice || 'diana';
     
     try {
         const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
@@ -102,17 +127,17 @@ async function playNextChunk() {
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
+            if(!isSpeaking) return; // Double check if stopped during fetch
             ttsAudio.src = reader.result;
-            ttsAudio.play().catch(e => { isSpeaking = false; animateMouth(false); });
+            ttsAudio.play().catch(e => { stopVoice(); });
         };
     } catch (error) {
-        isSpeaking = false;
-        animateMouth(false);
+        stopVoice();
     }
 }
 
 ttsAudio.onended = () => { if (isSpeaking) playNextChunk(); else animateMouth(false); };
-ttsAudio.onerror = () => { isSpeaking = false; animateMouth(false); };
+ttsAudio.onerror = () => { stopVoice(); };
 
 // --- APP INITIALIZATION ---
 function checkAppState() {
@@ -143,7 +168,7 @@ function saveSettings() {
     profile.memory = document.getElementById('ai-memory-input').value.trim();
     profile.voice = document.getElementById('voice-selector').value;
     localStorage.setItem('eduProfile', JSON.stringify(profile));
-    alert("Settings Saved! Voice updated.");
+    alert("Settings Saved!");
 }
 function loadDashboard() {
     document.getElementById('dash-name').textContent = profile.name;
@@ -172,7 +197,13 @@ function addXP(amount) {
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
-    if (tabId === 'tutor-screen') { startTimer(); if (!renderer) init3DRobot(); } else { clearInterval(timerInterval); }
+    if (tabId === 'tutor-screen') { 
+        startTimer(); 
+        if (!renderer) init3DRobot(); 
+    } else { 
+        clearInterval(timerInterval); 
+        stopVoice(); // Stop speaking if user leaves
+    }
 }
 function openTutor(subject) {
     document.getElementById('current-subject-title').textContent = subject;
@@ -191,7 +222,7 @@ function startTimer() {
     }, 1000);
 }
 
-// --- 3D ROBOT (EXACT MATCH TO YOUR IMAGE) ---
+// --- 3D ROBOT ---
 let scene, camera, renderer, robotGroup, head, leftEye, rightEye, mouth, leftArm, rightArm, clock = new THREE.Clock();
 function init3DRobot() {
     const canvas = document.getElementById('robot-canvas');
@@ -211,51 +242,41 @@ function init3DRobot() {
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.8 });
     const cyanGlow = new THREE.MeshBasicMaterial({ color: 0x00ffff });
 
-    // HEAD
     head = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.6, 1.2), whiteMat);
     head.position.y = 2.5; robotGroup.add(head);
     
-    // VISOR (Black Screen)
     const visor = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 0.1), darkMat);
     visor.position.set(0, 2.5, 0.6); robotGroup.add(visor);
 
-    // EYES (Cyan Half-Spheres for the happy look)
     leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16, 0, Math.PI), cyanGlow); leftEye.rotation.x = Math.PI/2; leftEye.position.set(-0.4, 2.6, 0.66); robotGroup.add(leftEye);
     rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16, 0, Math.PI), cyanGlow); rightEye.rotation.x = Math.PI/2; rightEye.position.set(0.4, 2.6, 0.66); robotGroup.add(rightEye);
 
-    // MOUTH (Cyan Smile)
     mouth = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.06, 8, 16, Math.PI), cyanGlow);
     mouth.rotation.x = Math.PI; mouth.position.set(0, 2.35, 0.66); robotGroup.add(mouth);
 
-    // BODY
     const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 1.6, 32), whiteMat);
     body.position.y = 0.9; robotGroup.add(body);
 
-    // CHEST (Ring & Glow)
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.08, 16, 32), darkMat);
     ring.position.set(0, 1.1, 1.05); robotGroup.add(ring);
     const chestGlow = new THREE.Mesh(new THREE.CircleGeometry(0.2, 32), cyanGlow);
     chestGlow.position.set(0, 1.1, 1.06); robotGroup.add(chestGlow);
 
-    // ARMS
     const armGeo = new THREE.CylinderGeometry(0.15, 0.15, 1, 16);
     const jointGeo = new THREE.SphereGeometry(0.2, 16, 16);
     
-    // Left Arm
     leftArm = new THREE.Group();
     const lUpper = new THREE.Mesh(armGeo, whiteMat); lUpper.position.y = 0.5; leftArm.add(lUpper);
     const lJoint = new THREE.Mesh(jointGeo, darkMat); leftArm.add(lJoint);
     const lFore = new THREE.Mesh(armGeo, whiteMat); lFore.position.y = -0.5; leftArm.add(lFore);
     leftArm.position.set(-1.3, 1.4, 0); leftArm.rotation.z = 0.6; robotGroup.add(leftArm);
 
-    // Right Arm (Waving)
     rightArm = new THREE.Group();
     const rUpper = new THREE.Mesh(armGeo, whiteMat); rUpper.position.y = 0.5; rightArm.add(rUpper);
     const rJoint = new THREE.Mesh(jointGeo, darkMat); rightArm.add(rJoint);
     const rFore = new THREE.Mesh(armGeo, whiteMat); rFore.position.y = -0.5; rightArm.add(rFore);
     rightArm.position.set(1.3, 1.4, 0); rightArm.rotation.z = -0.6; robotGroup.add(rightArm);
 
-    // LEGS
     const legGeo = new THREE.CylinderGeometry(0.25, 0.25, 1.2, 16);
     const footGeo = new THREE.BoxGeometry(0.5, 0.3, 0.8);
     const leftLeg = new THREE.Mesh(legGeo, whiteMat); leftLeg.position.set(-0.5, -0.4, 0); robotGroup.add(leftLeg);
@@ -268,7 +289,7 @@ function init3DRobot() {
 }
 
 function animate3D() {
-    requestAnimationFrame(animate3D);
+    animationFrameId = requestAnimationFrame(animate3D);
     if (!robotGroup) return;
     const time = clock.getElapsedTime();
     robotGroup.position.y = Math.sin(time * 2) * 0.1;
@@ -301,6 +322,12 @@ document.getElementById('image-upload').addEventListener('change', (event) => {
     reader.onload = (e) => handleSend("I have uploaded an image of a problem. Please read it carefully and solve it step-by-step.", e.target.result);
     reader.readAsDataURL(file);
 });
+document.getElementById('pdf-upload').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    // Placeholder for PDF parsing logic
+    alert("PDF upload initiated. For this version, please convert PDF to text or image for the AI to read it perfectly.");
+});
 
 // --- AI BRAIN ---
 async function handleSend(customPrompt = null, imageBase64 = null) {
@@ -309,6 +336,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     if (!text) return;
     isProcessing = true;
     addXP(5);
+    stopVoice(); // Stop any ongoing speech when a new prompt is sent
 
     if (!customPrompt) {
         addMessageToUI(text, 'user');
@@ -326,8 +354,10 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     let systemPrompt = `You are ${profile.tutor}, an expert AI tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: ${profile.tutor === 'Nova' ? 'friendly' : profile.tutor === 'Atlas' ? 'strict' : 'funny'}.`;
     if (profile.memory) systemPrompt += ` \nCRITICAL STUDENT MEMORY: ${profile.memory}. Adapt your teaching to this.`;
     
-    // Instruct AI to use Markdown clearly
-    systemPrompt += ` \nFormat your response beautifully using Markdown (use ** for bold, ## for headers, and bullet points).`;
+    // Strong Instructions for Markdown and Links
+    systemPrompt += ` \nFormat your response beautifully using Markdown (use ** for bold, ## for headers, and bullet points). 
+    If you mention a YouTube video, provide it as a markdown link like this: [Video Title](https://youtube.com/...).
+    Do not use complex LaTeX. Use plain text for math (e.g., 'x^2' or 'x squared').`;
 
     if (currentMode === 'quiz') { systemPrompt += ` \nGenerate a 3-question quiz.`; currentMode = 'chat'; }
     if (currentMode === 'feynman') { systemPrompt += ` \nAct confused. Let the student explain to you.`; currentMode = 'chat'; }
@@ -362,7 +392,6 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
 
         const aiResponse = data.choices[0].message.content;
         
-        // Render Markdown in UI, but send clean text to TTS
         addMessageToUI(aiResponse, 'ai', true);
         chatHistory.push({ text: aiResponse, sender: 'ai' });
         localStorage.setItem('tutorHistory', JSON.stringify(chatHistory));
@@ -399,7 +428,7 @@ document.getElementById('feynman-btn').addEventListener('click', () => { current
 document.getElementById('clear-chat').addEventListener('click', () => { 
     if(confirm("Clear chat?")) { 
         chatHistory = []; localStorage.removeItem('tutorHistory'); chatContainer.innerHTML = ''; 
-        ttsAudio.pause(); isSpeaking = false; if(mouth) animateMouth(false);
+        stopVoice();
     } 
 });
 function resetApp() { if (confirm("Erase all data?")) { localStorage.clear(); location.reload(); } }

@@ -65,7 +65,10 @@
             <header class="tutor-header">
                 <button class="back-btn" onclick="switchTab('dashboard-screen')">❮</button>
                 <div id="current-subject-title">Select a Subject</div>
-                <div id="study-timer">⏱️ 00:00:00</div>
+                <div class="header-controls">
+                    <button id="stop-voice-btn" class="stop-btn hidden" onclick="stopVoice()">🛑 Stop</button>
+                    <div id="study-timer">⏱️ 00:00:00</div>
+                </div>
             </header>
             <div id="robot-container">
                 <canvas id="robot-canvas"></canvas>
@@ -76,10 +79,12 @@
                 <button id="feynman-btn" class="action-btn">🧑‍🏫 Feynman</button>
                 <button id="image-btn" class="action-btn" onclick="document.getElementById('image-upload').click()">📸 Photo</button>
                 <button id="file-btn" class="action-btn" onclick="document.getElementById('file-upload').click()">📎 Text</button>
+                <button id="pdf-btn" class="action-btn" onclick="document.getElementById('pdf-upload').click()">📄 PDF</button>
                 <button id="clear-chat" class="action-btn" style="color:#ef4444;">Reset</button>
             </div>
             <input type="file" id="image-upload" accept="image/*" style="display:none;">
             <input type="file" id="file-upload" accept=".txt" style="display:none;">
+            <input type="file" id="pdf-upload" accept=".pdf" style="display:none;">
 
             <main id="chat-container">
                 <div class="message ai-message">Welcome to class! Select a subject or upload an image of a problem to begin.</div>
@@ -104,7 +109,6 @@
                 <p><strong>Tutor:</strong> <span id="prof-tutor"></span></p>
             </div>
             
-            <!-- NEW: VOICE SELECTION -->
             <div class="memory-card">
                 <h3>🎙️ Voice Settings</h3>
                 <select id="voice-selector" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:white; border:1px solid var(--border); margin-top:10px;">
