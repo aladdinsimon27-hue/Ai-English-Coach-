@@ -249,7 +249,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     }
 
     // USE LIGHTER MODEL UNLESS 'THINK HARDER' IS ON
-    let modelToUse = 'llama-3.1-8b-instant'; // 500k TPD limit, very fast
+    let modelToUse = 'openai/gpt-oss-20b'; // 500k TPD limit, very fast
     if (imageBase64) modelToUse = 'llama-3.2-11b-vision-instruct';
     else if (isThinkHarder) modelToUse = 'openai/gpt-oss-120b'; // 200k TPD limit, very smart
 
