@@ -4,7 +4,7 @@ android {
     namespace = "com.aladdin.englishcoach"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.aladdin.englishcoach"
+        applicationId "com.aladdin.superapp2026"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
