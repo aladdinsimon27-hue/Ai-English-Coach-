@@ -249,12 +249,12 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     }
 
     // USE LIGHTER MODEL UNLESS 'THINK HARDER' IS ON
-    let modelToUse = 'openai/gpt-oss-20b'; // 500k TPD limit, very fast
+    let modelToUse = 'gemini-1.5-flash'; // 500k TPD limit, very fast
     if (imageBase64) modelToUse = 'llama-3.2-11b-vision-instruct';
-    else if (isThinkHarder) modelToUse = 'openai/gpt-oss-120b'; // 200k TPD limit, very smart
+    else if (isThinkHarder) modelToUse = 'gemini-1.5-pro'; // 200k TPD limit, very smart
 
     try {
-        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const res = await fetch('https://gemini-web2api-for-edu.onrender.com/v1/chat/completions', {
             method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: modelToUse, messages, temperature: 0.7, max_tokens: 2000 })
         });
