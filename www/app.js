@@ -249,9 +249,9 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     }
 
     // USE LIGHTER MODEL UNLESS 'THINK HARDER' IS ON
-    let modelToUse = 'gemini-1.5-flash'; // 500k TPD limit, very fast
+    let modelToUse = 'gemini-3.6-flash'; // 500k TPD limit, very fast
     if (imageBase64) modelToUse = 'llama-3.2-11b-vision-instruct';
-    else if (isThinkHarder) modelToUse = 'gemini-1.5-pro'; // 200k TPD limit, very smart
+    else if (isThinkHarder) modelToUse = 'gemini-3.5-flash-thinking'; // 200k TPD limit, very smart
 
     try {
         const res = await fetch('https://gemini-web2api-for-edu.onrender.com/v1/chat/completions', {
