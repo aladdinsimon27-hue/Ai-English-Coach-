@@ -1,6 +1,9 @@
-// AI EduSchool - Bulletproof Build (Size > 6MB, Robust AI)
-const API_URL = 'https://gemini-web2api-for-edu.onrender.com/v1/chat/completions';
-const MODEL = 'gemini-3.6-flash';
+// AI EduSchool - Bulletproof Build with Smart Fallback
+
+const GEMINI_URL = 'https://gemini-web2api-for-edu.onrender.com/v1/chat/completions';
+const GEMINI_MODEL = 'gemini-3.6-flash';
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'openai/gpt-oss-20b'; // Reliable fast model
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
 let currentSheetTarget = null;
@@ -181,7 +184,7 @@ function showTyping(container) {
     return id;
 }
 
-// --- FORM SUBMISSIONS & FETCHING ---
+// --- FORM SUBMISSIONS ---
 document.getElementById('generalForm').addEventListener('submit', (e) => { e.preventDefault(); handleSend('general'); });
 document.getElementById('tutorForm').addEventListener('submit', (e) => { e.preventDefault(); handleSend('tutor'); });
 
@@ -228,34 +231,66 @@ async function handleSend(target) {
     }
 
     try {
-        // 70 second timeout for Render cold starts
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 70000);
+        // Try Gemini first, fallback to Groq if it fails
+        const aiReply = await fetchWithFallback(messages);
+        document.getElementById(typingId)?.remove();
+        addMessage(aiReply, 'ai', area);
 
-        const res = await fetch(API_URL, {
+    } catch (err) {
+        document.getElementById(typingId)?.remove();
+        addMessage(`⚠️ **Error:** ${err.message}`, 'ai', area);
+    } finally {
+        isProcessing = false;
+    }
+}
+
+// --- SMART FALLBACK ENGINE ---
+async function fetchWithFallback(messages) {
+    // 1. Try Gemini Proxy
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000); // 60s for Render wake up
+        
+        const res = await fetch(GEMINI_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: MODEL, messages: messages, temperature: 0.7 }),
+            body: JSON.stringify({ model: GEMINI_MODEL, messages: messages, temperature: 0.7 }),
             signal: controller.signal
         });
         clearTimeout(timeout);
 
         const data = await res.json();
-        document.getElementById(typingId)?.remove();
+        if (!res.ok || data.error) throw new Error(data.error?.message || `Gemini Error ${res.status}`);
 
-        if (!res.ok || data.error) throw new Error(data.error?.message || `Server Error ${res.status}`);
+        return data.choices[0].message.content;
+    } catch (geminiError) {
+        console.warn("Gemini Proxy Failed. Switching to Groq Fallback...", geminiError);
+        
+        // 2. Fallback to Groq
+        const groqKey = window.APP_CONFIG?.GROQ_API_KEY;
+        if (!groqKey) throw new Error("Primary server failed and no Groq API key found.");
 
-        addMessage(data.choices[0].message.content, 'ai', area);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-    } catch (err) {
-        document.getElementById(typingId)?.remove();
-        if (err.name === 'AbortError') {
-            addMessage(`⚠️ **Timeout:** The server is taking too long. Please try again.`, 'ai', area);
-        } else {
-            addMessage(`⚠️ **Error:** ${err.message}`, 'ai', area);
+        const res = await fetch(GROQ_URL, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${groqKey}`,
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ model: GROQ_MODEL, messages: messages, temperature: 0.7 }),
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`Fallback API Error ${res.status}: ${errData.error?.message || ''}`);
         }
-    } finally {
-        isProcessing = false;
+
+        const data = await res.json();
+        return data.choices[0].message.content;
     }
 }
 
