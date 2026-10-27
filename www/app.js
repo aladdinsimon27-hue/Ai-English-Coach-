@@ -1,14 +1,17 @@
-// AI EduSchool - Bulletproof Build with Smart Fallback
+// AI EduSchool - Phase 1: Client-Side RAG Engine
 
 const GEMINI_URL = 'https://gemini-web2api-for-edu.onrender.com/v1/chat/completions';
 const GEMINI_MODEL = 'gemini-3.6-flash';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'openai/gpt-oss-20b'; // Reliable fast model
+const GROQ_MODEL = 'openai/gpt-oss-20b';
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
 let currentSheetTarget = null;
 let selectedFiles = { general: null, tutor: null };
 let isProcessing = false;
+
+// --- PHASE 1: TEXTBOOK RAG MEMORY ---
+let textbookChunks = JSON.parse(localStorage.getItem('textbookChunks')) || [];
 
 // --- WIZARD LOGIC ---
 function nextStep(step) {
@@ -106,12 +109,38 @@ function triggerUpload(type) {
     if (type === 'camera') document.getElementById('cameraInput').click();
     if (type === 'gallery') document.getElementById('galleryInput').click();
     if (type === 'file') document.getElementById('fileInput').click();
+    if (type === 'textbook') document.getElementById('textbookInput').click();
     closeSheet();
 }
 
 document.getElementById('cameraInput').addEventListener('change', (e) => handleFileSelect(e, 'image'));
 document.getElementById('galleryInput').addEventListener('change', (e) => handleFileSelect(e, 'image'));
 document.getElementById('fileInput').addEventListener('change', (e) => handleFileSelect(e, 'file'));
+
+// PHASE 1: TEXTBOOK UPLOAD LOGIC
+document.getElementById('textbookInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const text = event.target.result;
+        // Split into 1500 character chunks
+        const chunks = text.match(/[\s\S]{1,1500}/g) || [];
+        if (chunks.length > 3000) {
+            alert("⚠️ Textbook is too large for device memory. Please use a smaller file (under 4MB).");
+            return;
+        }
+        textbookChunks = chunks;
+        try {
+            localStorage.setItem('textbookChunks', JSON.stringify(textbookChunks));
+            alert(`📚 Success! Textbook loaded and indexed: ${chunks.length} sections.`);
+        } catch (err) {
+            alert("⚠️ Device memory full. Could not save textbook.");
+            textbookChunks = [];
+        }
+    };
+    reader.readAsText(file);
+});
 
 function handleFileSelect(event, type) {
     const file = event.target.files[0];
@@ -184,6 +213,36 @@ function showTyping(container) {
     return id;
 }
 
+// --- PHASE 1: RAG SEARCH FUNCTION ---
+function findRelevantChunk(query) {
+    if (!textbookChunks || textbookChunks.length === 0) return null;
+    
+    // Remove common words and split into keywords
+    const stopWords = ["the", "and", "is", "in", "it", "to", "of", "what", "how", "why", "can", "you", "me", "tell", "explain"];
+    const queryWords = query.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 3 && !stopWords.includes(w));
+    
+    if (queryWords.length === 0) return null;
+
+    let bestChunk = null;
+    let highestScore = 0;
+
+    textbookChunks.forEach(chunk => {
+        let score = 0;
+        const chunkLower = chunk.toLowerCase();
+        queryWords.forEach(word => {
+            if (chunkLower.includes(word)) score++;
+        });
+        
+        if (score > highestScore) {
+            highestScore = score;
+            bestChunk = chunk;
+        }
+    });
+
+    // Only return if we found a meaningful match (at least 1 keyword)
+    return highestScore > 0 ? bestChunk : null;
+}
+
 // --- FORM SUBMISSIONS ---
 document.getElementById('generalForm').addEventListener('submit', (e) => { e.preventDefault(); handleSend('general'); });
 document.getElementById('tutorForm').addEventListener('submit', (e) => { e.preventDefault(); handleSend('tutor'); });
@@ -205,9 +264,18 @@ async function handleSend(target) {
 
     const typingId = showTyping(area);
 
+    // PHASE 1: Inject RAG Context
+    let contextStr = "";
+    if (text && textbookChunks.length > 0) {
+        const bestChunk = findRelevantChunk(text);
+        if (bestChunk) {
+            contextStr = `\n\n[RELEVANT TEXTBOOK CONTEXT]:\n${bestChunk}\n\nUse the above textbook context to answer the user's question accurately.`;
+        }
+    }
+
     let sysPrompt = target === 'general' 
-        ? "You are a helpful, intelligent AI assistant."
-        : `You are an expert AI ${document.getElementById('subject-selector').value} tutor for Grade ${profile.grade}. Tone: friendly. Use markdown for formatting.`;
+        ? "You are a helpful, intelligent AI assistant." + contextStr
+        : `You are an expert AI ${document.getElementById('subject-selector').value} tutor for Grade ${profile.grade}. Tone: friendly. Use markdown for formatting.` + contextStr;
         
     let messages = [{ role: 'system', content: sysPrompt }];
     const history = Array.from(area.querySelectorAll('.message')).slice(-7, -1);
@@ -231,11 +299,9 @@ async function handleSend(target) {
     }
 
     try {
-        // Try Gemini first, fallback to Groq if it fails
         const aiReply = await fetchWithFallback(messages);
         document.getElementById(typingId)?.remove();
         addMessage(aiReply, 'ai', area);
-
     } catch (err) {
         document.getElementById(typingId)?.remove();
         addMessage(`⚠️ **Error:** ${err.message}`, 'ai', area);
@@ -246,10 +312,9 @@ async function handleSend(target) {
 
 // --- SMART FALLBACK ENGINE ---
 async function fetchWithFallback(messages) {
-    // 1. Try Gemini Proxy
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000); // 60s for Render wake up
+        const timeout = setTimeout(() => controller.abort(), 60000); 
         
         const res = await fetch(GEMINI_URL, {
             method: 'POST',
@@ -258,37 +323,28 @@ async function fetchWithFallback(messages) {
             signal: controller.signal
         });
         clearTimeout(timeout);
-
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error?.message || `Gemini Error ${res.status}`);
-
         return data.choices[0].message.content;
     } catch (geminiError) {
         console.warn("Gemini Proxy Failed. Switching to Groq Fallback...", geminiError);
-        
-        // 2. Fallback to Groq
         const groqKey = window.APP_CONFIG?.GROQ_API_KEY;
         if (!groqKey) throw new Error("Primary server failed and no Groq API key found.");
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        const timeout = setTimeout(() => controller.abort(), 30000); 
 
         const res = await fetch(GROQ_URL, {
             method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${groqKey}`,
-                'Content-Type': 'application/json' 
-            },
+            headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: GROQ_MODEL, messages: messages, temperature: 0.7 }),
             signal: controller.signal
         });
         clearTimeout(timeout);
-
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
             throw new Error(`Fallback API Error ${res.status}: ${errData.error?.message || ''}`);
         }
-
         const data = await res.json();
         return data.choices[0].message.content;
     }

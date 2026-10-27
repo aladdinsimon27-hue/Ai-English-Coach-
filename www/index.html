@@ -14,7 +14,6 @@
     <div class="wizard-card">
         <div class="wizard-progress"><div id="wizard-progress-bar"></div></div>
         
-        <!-- STEP 1 -->
         <div id="step-1" class="wizard-step active">
             <div class="wizard-icon">👋</div>
             <h1>Welcome to AI EduSchool</h1>
@@ -23,7 +22,6 @@
             <button class="glow-btn" onclick="nextStep(2)">Continue →</button>
         </div>
 
-        <!-- STEP 2 -->
         <div id="step-2" class="wizard-step hidden">
             <div class="wizard-icon">🎓</div>
             <h1>What is your grade?</h1>
@@ -37,7 +35,6 @@
             <button class="glow-btn" onclick="nextStep(3)">Continue →</button>
         </div>
 
-        <!-- STEP 3 -->
         <div id="step-3" class="wizard-step hidden">
             <div class="wizard-icon">🌍</div>
             <h1>Select Curriculum</h1>
@@ -189,6 +186,8 @@
             <button onclick="triggerUpload('camera')"><span>📸</span> Camera</button>
             <button onclick="triggerUpload('gallery')"><span>🖼️</span> Gallery</button>
             <button onclick="triggerUpload('file')"><span>📄</span> Document</button>
+            <!-- NEW PHASE 1 BUTTON -->
+            <button onclick="triggerUpload('textbook')"><span>📚</span> Textbook</button>
         </div>
     </div>
 </div>
@@ -197,6 +196,8 @@
 <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
 <input type="file" id="galleryInput" accept="image/*" hidden>
 <input type="file" id="fileInput" accept=".txt,.pdf" hidden>
+<!-- NEW PHASE 1 INPUT -->
+<input type="file" id="textbookInput" accept=".txt" hidden>
 
 <script src="config.js"></script>
 <script src="app.js"></script>
