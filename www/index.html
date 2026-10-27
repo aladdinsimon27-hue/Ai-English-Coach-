@@ -21,7 +21,6 @@
             <input type="text" id="input-name" class="glow-input" placeholder="Enter your full name">
             <button class="glow-btn" onclick="nextStep(2)">Continue →</button>
         </div>
-
         <div id="step-2" class="wizard-step hidden">
             <div class="wizard-icon">🎓</div>
             <h1>What is your grade?</h1>
@@ -34,7 +33,6 @@
             </select>
             <button class="glow-btn" onclick="nextStep(3)">Continue →</button>
         </div>
-
         <div id="step-3" class="wizard-step hidden">
             <div class="wizard-icon">🌍</div>
             <h1>Select Curriculum</h1>
@@ -65,8 +63,16 @@
                 <h3>📊 Daily Goal Progress</h3>
                 <div class="progress-track"><div id="dash-xp-bar" class="progress-fill"></div></div>
             </div>
+
+            <!-- NEW EXAM CENTER BUTTON -->
+            <div class="glass-card mt-20" style="border-color: var(--purple); background: linear-gradient(145deg, rgba(184,0,255,0.1), rgba(5,9,20,0.8));">
+                <h3>🏆 Exam Center</h3>
+                <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 10px;">Test your knowledge with a 15-minute mock exam.</p>
+                <p style="font-size: 0.9rem; font-weight: bold; color: var(--blue); margin-bottom: 10px;">Last Score: <span id="last-exam-score">N/A</span></p>
+                <button class="glow-btn" style="padding: 10px; font-size: 0.9rem;" onclick="startExamSetup()">Start Mock Exam</button>
+            </div>
             
-            <h2 class="section-title">Your Learning Space</h2>
+            <h2 class="section-title mt-20">Your Learning Space</h2>
             <div class="subjects-grid">
                 <div class="subject-card" onclick="openSubject('Math')">
                     <div class="icon">📐</div><h3>Math</h3>
@@ -84,14 +90,6 @@
                     <div class="icon">🧬</div><h3>Biology</h3>
                     <div class="progress-track"><div class="progress-fill" style="width: 54%;"></div></div>
                 </div>
-                <div class="subject-card" onclick="openSubject('English')">
-                    <div class="icon">🇬🇧</div><h3>English</h3>
-                    <div class="progress-track"><div class="progress-fill" style="width: 26%;"></div></div>
-                </div>
-                <div class="subject-card" onclick="openSubject('History')">
-                    <div class="icon">🏛️</div><h3>History</h3>
-                    <div class="progress-track"><div class="progress-fill" style="width: 20%;"></div></div>
-                </div>
             </div>
         </main>
     </div>
@@ -100,15 +98,10 @@
     <div id="general-chat-screen" class="screen chat-overlay hidden">
         <header class="glass-header">
             <button class="back-btn" onclick="closeChat('dashboard-screen')">‹</button>
-            <div class="header-title">
-                <h2>General AI Chat</h2>
-                <p>Ask anything, anytime.</p>
-            </div>
+            <div class="header-title"><h2>General AI Chat</h2></div>
             <div style="width: 40px;"></div>
         </header>
-        <main class="chat-scroll" id="general-chat-area">
-            <div class="date-label">NEW CONVERSATION</div>
-        </main>
+        <main class="chat-scroll" id="general-chat-area"><div class="date-label">NEW CONVERSATION</div></main>
         <div class="input-area">
             <div id="general-chips" class="chips-container"></div>
             <form id="generalForm" class="composer">
@@ -123,10 +116,7 @@
     <div id="tutor-chat-screen" class="screen chat-overlay hidden">
         <header class="glass-header">
             <button class="back-btn" onclick="closeChat('dashboard-screen')">‹</button>
-            <div class="header-title">
-                <h2>AI EduSchool</h2>
-                <p id="tutor-subject-title">Physics</p>
-            </div>
+            <div class="header-title"><h2>AI EduSchool</h2><p id="tutor-subject-title">Physics</p></div>
             <select id="subject-selector" class="subject-select" onchange="changeSubject(this.value)">
                 <option>Physics</option><option>Math</option><option>Chemistry</option>
                 <option>Biology</option><option>English</option><option>History</option>
@@ -143,6 +133,33 @@
         </div>
     </div>
 
+    <!-- EXAM SCREEN (PHASE 2) -->
+    <div id="exam-screen" class="screen chat-overlay hidden" style="background: #02060d; z-index: 10000;">
+        <header class="glass-header" style="border-bottom: 1px solid var(--purple);">
+            <div class="header-title">
+                <h2 id="exam-subject-title">Exam Mode</h2>
+                <p>Question <span id="exam-current-q">1</span> of 10</p>
+            </div>
+            <div class="lvl-badge" id="exam-timer" style="border-color: #ff3c3c; color: #ff3c3c; font-family: monospace; font-size: 1.1rem;">15:00</div>
+        </header>
+        <main class="chat-scroll" id="exam-content" style="padding: 20px;">
+            <!-- Questions load here -->
+        </main>
+        <div class="input-area" style="padding: 20px; border-top: 1px solid var(--border);">
+            <button id="exam-next-btn" class="glow-btn" onclick="nextExamQuestion()" style="width: 100%;">Next Question →</button>
+        </div>
+    </div>
+
+    <!-- EXAM RESULTS SCREEN -->
+    <div id="results-screen" class="screen chat-overlay hidden" style="background: #02060d; z-index: 10000;">
+        <header class="glass-header">
+            <div class="header-title"><h2>Exam Results</h2></div>
+        </header>
+        <main class="scroll-area" id="results-content">
+            <!-- Results load here -->
+        </main>
+    </div>
+
     <!-- PROFILE -->
     <div id="profile-screen" class="screen hidden">
         <header class="glass-header"><h1>Profile</h1></header>
@@ -151,13 +168,6 @@
                 <div class="avatar-glow">👤</div>
                 <h2 id="prof-name-display">Student</h2>
                 <p id="prof-grade-display">Grade 10 • Curriculum</p>
-            </div>
-            <div class="glass-card mt-20">
-                <h3>🎙️ Voice Settings</h3>
-                <select class="glow-input mt-10">
-                    <option>Diana (Clear & Friendly)</option>
-                    <option>Hannah (Warm & Calm)</option>
-                </select>
             </div>
             <button class="danger-btn mt-20" onclick="resetApp()">Erase All Data</button>
         </main>
@@ -186,17 +196,14 @@
             <button onclick="triggerUpload('camera')"><span>📸</span> Camera</button>
             <button onclick="triggerUpload('gallery')"><span>🖼️</span> Gallery</button>
             <button onclick="triggerUpload('file')"><span>📄</span> Document</button>
-            <!-- NEW PHASE 1 BUTTON -->
             <button onclick="triggerUpload('textbook')"><span>📚</span> Textbook</button>
         </div>
     </div>
 </div>
 
-<!-- HIDDEN INPUTS -->
 <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
 <input type="file" id="galleryInput" accept="image/*" hidden>
 <input type="file" id="fileInput" accept=".txt,.pdf" hidden>
-<!-- NEW PHASE 1 INPUT -->
 <input type="file" id="textbookInput" accept=".txt" hidden>
 
 <script src="config.js"></script>
