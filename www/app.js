@@ -1,21 +1,17 @@
-// AI EduSchool - Fixed Uploads, Fixed AI Interaction
+// AI EduSchool - Pure Gemini Proxy, Fixed Input, Image Previews
 
-const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
-const ttsAudio = document.getElementById('tts-audio');
-const plusMenu = document.getElementById('plus-menu');
 const mainNav = document.getElementById('main-nav');
-const pauseVoiceBtn = document.getElementById('pause-voice-btn');
-const stopVoiceBtn = document.getElementById('stop-voice-btn');
+const bottomSheet = document.getElementById('bottom-sheet-overlay');
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
 let currentSubject = 'General';
 let chatHistory = [];
 let isProcessing = false;
 let isThinkHarder = false;
-let isPaused = false;
+let selectedImageBase64 = null; // Holds image until sent
 
 // --- SUBJECT HISTORY ---
 function loadHistoryForSubject(subject) {
@@ -25,37 +21,51 @@ function loadHistoryForSubject(subject) {
 }
 function saveHistory() { localStorage.setItem(`tutorHistory_${currentSubject}`, JSON.stringify(chatHistory)); }
 
-// --- MENU & UPLOADS ---
-function toggleMenu() { plusMenu.classList.toggle('hidden'); }
-
-function triggerUpload(id) {
-    const fileInput = document.getElementById(id);
-    if (fileInput) {
-        fileInput.click();
-    } else {
-        alert("Error: File input not found.");
-    }
-    toggleMenu();
+// --- MENU & UI ---
+function toggleBottomSheet() {
+    bottomSheet.classList.toggle('hidden');
 }
-
+function triggerUpload(id) {
+    document.getElementById(id).click();
+    toggleBottomSheet();
+}
 function toggleThinkHarder() {
     isThinkHarder = !isThinkHarder;
     const btn = document.getElementById('think-harder-btn');
     if (isThinkHarder) { btn.classList.add('active'); btn.innerHTML = '<span>🧠</span> Think ON'; } 
     else { btn.classList.remove('active'); btn.innerHTML = '<span>🧠</span> Think'; }
-    toggleMenu();
+    toggleBottomSheet();
 }
 
-// --- VOICE CONTROLS ---
-function togglePauseVoice() {
-    if (ttsAudio.paused) { ttsAudio.play(); pauseVoiceBtn.innerHTML = '⏸️'; isPaused = false; } 
-    else { ttsAudio.pause(); pauseVoiceBtn.innerHTML = '▶️'; isPaused = true; }
+// --- IMAGE PREVIEW ---
+function handleImageSelect(event) {
+    const file = event.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        selectedImageBase64 = e.target.result;
+        document.getElementById('preview-img').src = selectedImageBase64;
+        document.getElementById('preview-area').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
 }
-function stopVoice() {
-    isSpeaking = false; speechQueue = []; ttsAudio.pause();
-    pauseVoiceBtn.classList.add('hidden'); stopVoiceBtn.classList.add('hidden');
-    isPaused = false; pauseVoiceBtn.innerHTML = '⏸️';
+function clearPreview() {
+    selectedImageBase64 = null;
+    document.getElementById('preview-area').classList.add('hidden');
+    document.getElementById('camera-upload').value = '';
+    document.getElementById('gallery-upload').value = '';
 }
+document.getElementById('camera-upload').addEventListener('change', handleImageSelect);
+document.getElementById('gallery-upload').addEventListener('change', handleImageSelect);
+
+document.getElementById('file-upload').addEventListener('change', (event) => {
+    const file = event.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        userInput.value = `I have uploaded a text file. Please teach me this material:\n\n${e.target.result}`;
+        // We don't send immediately, let the user hit send!
+    };
+    reader.readAsText(file);
+});
 
 // --- MARKDOWN PARSER ---
 function parseMarkdown(text) {
@@ -73,47 +83,6 @@ function parseMarkdown(text) {
     return html;
 }
 
-// --- FAST TTS ---
-let speechQueue = [], isSpeaking = false;
-function cleanTextForTTS(text) {
-    return text.replace(/\\\((.*?)\\\)/g, '$1').replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '$1 over $2').replace(/[*#_|>]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
-}
-function splitTextIntoChunks(text) {
-    let sentences = cleanTextForTTS(text).match(/[^.!?]+[.!?]+/g) || [cleanTextForTTS(text)];
-    let chunks = [], currentChunk = "";
-    sentences.forEach(s => {
-        if ((currentChunk + s).length < 400) currentChunk += s + " ";
-        else { if (currentChunk) chunks.push(currentChunk.trim()); currentChunk = s + " "; }
-    });
-    if (currentChunk) chunks.push(currentChunk.trim());
-    return chunks;
-}
-async function playGroqTTS(text) {
-    ttsAudio.pause(); speechQueue = splitTextIntoChunks(text);
-    if (speechQueue.length > 0) { 
-        isSpeaking = true; 
-        pauseVoiceBtn.classList.remove('hidden'); stopVoiceBtn.classList.remove('hidden'); 
-        playNextChunk(); 
-    }
-}
-async function playNextChunk() {
-    if (!isSpeaking || speechQueue.length === 0) { stopVoice(); return; }
-    const chunk = speechQueue.shift();
-    const voice = profile.voice || 'diana';
-    try {
-        const res = await fetch('https://api.groq.com/openai/v1/audio/speech', {
-            method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: 'canopylabs/orpheus-v1-english', input: chunk, voice: voice, response_format: 'wav' })
-        });
-        if (!res.ok) throw new Error('TTS Error');
-        const audioBlob = await res.blob();
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => { if(isSpeaking) { ttsAudio.src = reader.result; ttsAudio.play().catch(stopVoice); } };
-    } catch (error) { stopVoice(); }
-}
-ttsAudio.onended = () => { if (isSpeaking && !isPaused) playNextChunk(); };
-
 // --- INITIALIZATION ---
 function checkAppState() {
     if (!profile) {
@@ -127,16 +96,9 @@ function checkAppState() {
 }
 function finishOnboarding() {
     const name = document.getElementById('onboard-name').value.trim() || 'Student';
-    profile = { name, grade: document.getElementById('onboard-grade').value, curriculum: document.getElementById('onboard-curriculum').value, tutor: 'Nova', voice: 'diana', xp: 0, level: 1, memory: '' };
+    profile = { name, grade: document.getElementById('onboard-grade').value, curriculum: document.getElementById('onboard-curriculum').value, xp: 0, level: 1 };
     localStorage.setItem('eduProfile', JSON.stringify(profile));
     checkAppState();
-}
-function saveSettings() {
-    profile.memory = document.getElementById('ai-memory-input').value.trim();
-    profile.voice = document.getElementById('voice-selector').value;
-    profile.tutor = document.getElementById('tutor-selector').value;
-    localStorage.setItem('eduProfile', JSON.stringify(profile));
-    alert("Settings Saved!");
 }
 function loadDashboard() {
     document.getElementById('dash-name').textContent = profile.name;
@@ -144,10 +106,6 @@ function loadDashboard() {
     document.getElementById('dash-level').textContent = profile.level;
     document.getElementById('prof-name').textContent = profile.name;
     document.getElementById('prof-grade').textContent = profile.grade;
-    document.getElementById('prof-tutor').textContent = profile.tutor;
-    document.getElementById('ai-memory-input').value = profile.memory || '';
-    document.getElementById('voice-selector').value = profile.voice || 'diana';
-    document.getElementById('tutor-selector').value = profile.tutor || 'Nova';
     updateXPUI();
 }
 function updateXPUI() { if (!profile) return; document.getElementById('dash-xp-bar').style.width = `${(profile.xp % (profile.level * 100)) / (profile.level * 100) * 100}%`; }
@@ -163,30 +121,41 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    
     if(tabId === 'dashboard-screen') document.getElementById('nav-home').classList.add('active');
     if(tabId === 'planner-screen') document.getElementById('nav-planner').classList.add('active');
     if(tabId === 'profile-screen') document.getElementById('nav-profile').classList.add('active');
 
-    if (tabId === 'tutor-screen') { mainNav.classList.add('hidden'); } 
-    else { mainNav.classList.remove('hidden'); stopVoice(); }
+    if (tabId === 'tutor-screen') { 
+        mainNav.classList.add('hidden'); 
+    } else { 
+        mainNav.classList.remove('hidden'); 
+    }
 }
 
 function openTutor(subject) {
     loadHistoryForSubject(subject);
     document.getElementById('current-subject-title').textContent = subject;
     switchTab('tutor-screen');
-    if (chatHistory.length === 0) { handleSend(`Let's study ${subject} for Grade ${profile.grade}. Introduce the topic we should start with.`); }
+    if (chatHistory.length === 0) { 
+        // Don't auto-send, let the user type first. Just show welcome message.
+        renderHistory();
+    }
 }
 
 // --- RENDER UI ---
 function renderHistory() {
     chatContainer.innerHTML = '';
     if (chatHistory.length === 0) {
-        chatContainer.innerHTML = `<div class="message ai-message">Hello! I am your ${currentSubject} tutor. Ask me a question, upload an image of a problem, or tap <b>+</b> for tools.</div>`;
+        const div = document.createElement('div');
+        div.className = 'message ai-message';
+        div.innerHTML = `Hello! I am your ${currentSubject} tutor. Ask me a question, upload an image, or tap + for tools.`;
+        chatContainer.appendChild(div);
     } else {
         chatHistory.forEach(msg => addMessageToUI(msg.text, msg.sender, msg.sender === 'ai'));
     }
 }
+
 function addMessageToUI(text, sender, isMarkdown = false) {
     const div = document.createElement('div');
     div.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
@@ -196,75 +165,81 @@ function addMessageToUI(text, sender, isMarkdown = false) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// --- UPLOAD LISTENERS ---
-document.getElementById('file-upload').addEventListener('change', (event) => {
-    const file = event.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => handleSend(`I have uploaded a text file. Please teach me this material: \n\n${e.target.result}`);
-    reader.readAsText(file);
-});
-document.getElementById('image-upload').addEventListener('change', (event) => {
-    const file = event.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => handleSend("I have uploaded an image of a problem. Please read it carefully and solve it step-by-step.", e.target.result);
-    reader.readAsDataURL(file);
-});
-
 function handleQuickAction(action) {
-    toggleMenu();
-    if (action === 'quiz') handleSend("Quiz me on this subject. Give me 3 multiple-choice questions.");
-    if (action === 'feynman') handleSend("Let's use the Feynman technique. I will explain the current topic to you, and you act like a confused student asking me questions.");
-    if (action === 'notes') handleSend("Generate a structured study note from our conversation so far.");
+    toggleBottomSheet();
+    if (action === 'quiz') { userInput.value = "Quiz me on this subject. Give me 3 multiple-choice questions."; sendBtn.click(); }
+    if (action === 'feynman') { userInput.value = "Let's use the Feynman technique. I will explain the current topic to you, and you act like a confused student asking me questions."; sendBtn.click(); }
 }
 
 // --- AI BRAIN ---
-async function handleSend(customPrompt = null, imageBase64 = null) {
+async function handleSend() {
     if (isProcessing || !profile) return;
-    const text = customPrompt || userInput.value.trim(); if (!text) return;
-    isProcessing = true; addXP(5); stopVoice();
-    plusMenu.classList.add('hidden');
+    const text = userInput.value.trim(); 
+    if (!text && !selectedImageBase64) return; // Prevent empty sends
 
-    if (!customPrompt) {
-        addMessageToUI(text, 'user'); chatHistory.push({ text: text, sender: 'user' });
-        userInput.value = ''; saveHistory();
-    } else { addMessageToUI(customPrompt, 'user'); }
+    isProcessing = true; 
+    addXP(5);
+    bottomSheet.classList.add('hidden');
+    sendBtn.style.opacity = '0.5'; // Show it's locked
 
+    // Add User Message
+    let displayText = text;
+    if (selectedImageBase64) displayText = text ? `[Image Uploaded] ${text}` : `[Image Uploaded] Solve this.`;
+    
+    addMessageToUI(displayText, 'user'); 
+    chatHistory.push({ text: displayText, sender: 'user' });
+    
+    // Clear input & preview immediately
+    const currentImage = selectedImageBase64;
+    userInput.value = ''; 
+    clearPreview(); 
+    saveHistory();
+
+    // Show Thinking Indicator
     const think = document.createElement('div');
     think.className = 'message ai-message'; think.textContent = 'Thinking...'; think.id = 'think';
     chatContainer.appendChild(think); chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    let systemPrompt = `You are ${profile.tutor}, an expert AI ${currentSubject} tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: ${profile.tutor === 'Nova' ? 'friendly' : profile.tutor === 'Atlas' ? 'strict' : 'funny'}.`;
-    if (profile.memory) systemPrompt += ` \nCRITICAL STUDENT MEMORY: ${profile.memory}. Adapt your teaching to this.`;
+    // Build Prompts
+    let systemPrompt = `You are ${profile.tutor || 'Nova'}, an expert AI ${currentSubject} tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: friendly.`;
     if (isThinkHarder) systemPrompt += ` \nCRITICAL: This is a complex problem. Think step-by-step, verify your math/logic internally before answering.`;
-    systemPrompt += ` \nCRITICAL FORMATTING RULES: 1. NEVER use Markdown tables. 2. Use bold text for key terms. 3. Include fun emojis in almost every paragraph. 4. Use plain text math (e.g., 'x^2'). 5. If providing video links, use [Title](URL).`;
+    systemPrompt += ` \nCRITICAL FORMATTING RULES: 1. NEVER use Markdown tables. 2. Use bold text for key terms. 3. Include fun emojis. 4. Use plain text math (e.g., 'x^2'). 5. Links must use [Title](URL).`;
 
     let messages = [{ role: 'system', content: systemPrompt }];
-    chatHistory.slice(-10).forEach(m => messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
+    chatHistory.slice(-8).forEach(m => messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
 
-    if (imageBase64) {
-        messages.push({ role: 'user', content: [{ type: "text", text: "Solve the problem in this image." }, { type: "image_url", image_url: { url: imageBase64 } }] });
+    // Attach Image if present
+    if (currentImage) {
+        messages.push({ 
+            role: 'user', 
+            content: [
+                { type: "text", text: text || "Solve the problem in this image." }, 
+                { type: "image_url", image_url: { url: currentImage } }
+            ] 
+        });
     } else {
         messages.push({ role: 'user', content: text });
     }
 
+    // Select Model
     let modelToUse = 'gemini-3.7-flash'; 
-    if (imageBase64) modelToUse = 'llama-3.2-11b-vision-instruct';
+    if (currentImage) modelToUse = 'llama-3.2-11b-vision-instruct'; // Vision model for images
     else if (isThinkHarder) modelToUse = 'gemini-3.5-flash-thinking'; 
 
     try {
+        // Fetch from Render proxy
         const res = await fetch('https://gemini-web2api-for-edu.onrender.com/v1/chat/completions', {
-            method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: modelToUse, messages, temperature: 0.7, max_tokens: 2000 })
         });
 
         const data = await res.json();
         document.getElementById('think').remove();
         
-        // CRITICAL: If Render server is sleeping or errors out
         if (!res.ok || data.error) { 
-            const errorMsg = data.error ? data.error.message : "Server is waking up (Free Tier). Please wait 50 seconds and try again.";
+            const errorMsg = data.error ? data.error.message : "Server is waking up. Wait 50s and try again.";
             addMessageToUI(`⚠️ Error: ${errorMsg}`, 'ai'); 
-            isProcessing = false; 
             return; 
         }
 
@@ -273,18 +248,20 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
         addMessageToUI(aiResponse, 'ai', true);
         chatHistory.push({ text: aiResponse, sender: 'ai' }); saveHistory();
 
-        if (aiResponse.toLowerCase().includes("correct") || aiResponse.toLowerCase().includes("great job")) addXP(15);
-        playGroqTTS(aiResponse);
+        if (aiResponse.toLowerCase().includes("correct")) addXP(15);
 
     } catch (e) {
         document.getElementById('think').remove();
         addMessageToUI("⚠️ Network Error. The Render server might be asleep. Please wait 1 minute and try again.", 'ai');
+    } finally {
+        // ALWAYS unlock the button, no matter what happens
+        isProcessing = false; 
+        sendBtn.style.opacity = '1';
     }
-    isProcessing = false;
 }
 
 // --- EVENTS ---
-sendBtn.addEventListener('click', () => handleSend());
+sendBtn.addEventListener('click', handleSend);
 userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
 function resetApp() { if (confirm("Erase all data?")) { localStorage.clear(); location.reload(); } }
 

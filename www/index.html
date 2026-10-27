@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <audio id="tts-audio" style="display:none;"></audio>
 
+    <!-- ONBOARDING -->
     <div id="onboarding-screen" class="screen hidden">
         <div class="onboarding-container">
             <h1>Welcome to AI EduSchool</h1>
@@ -31,8 +31,10 @@
         </div>
     </div>
 
+    <!-- MAIN APP -->
     <div id="app-shell" class="screen hidden">
         
+        <!-- DASHBOARD -->
         <div id="dashboard-screen" class="tab-content">
             <header class="dash-header">
                 <div>
@@ -56,80 +58,79 @@
             </div>
         </div>
 
+        <!-- TUTOR SCREEN (Gemini Style) -->
         <div id="tutor-screen" class="tab-content hidden">
-            <header class="tutor-header">
-                <button class="back-btn" onclick="switchTab('dashboard-screen')">↩️</button>
-                <div class="header-title">
-                    <h2>Ask Edu</h2>
-                    <span id="current-subject-title">General</span>
+            <header class="gemini-header">
+                <button class="gemini-back" onclick="switchTab('dashboard-screen')">↩</button>
+                <div class="gemini-title">
+                    <span id="current-subject-title">Chemistry</span>
                 </div>
-                <div class="voice-controls">
-                    <button id="pause-voice-btn" class="icon-btn hidden" onclick="togglePauseVoice()">⏸️</button>
-                    <button id="stop-voice-btn" class="icon-btn hidden" onclick="stopVoice()">🛑</button>
-                </div>
+                <button class="gemini-menu-btn">⋮</button>
             </header>
 
             <main id="chat-container"></main>
 
-            <footer class="chat-footer">
-                <!-- The + Menu Popup (Grid Layout) -->
-                <div id="plus-menu" class="plus-menu hidden">
-                    <button onclick="triggerUpload('image-upload')"><span>📸</span> Camera</button>
-                    <button onclick="triggerUpload('file-upload')"><span>📎</span> File</button>
-                    <button id="think-harder-btn" onclick="toggleThinkHarder()"><span>🧠</span> Think</button>
-                    <button id="quiz-btn" onclick="handleQuickAction('quiz')"><span>📝</span> Quiz</button>
-                    <button id="feynman-btn" onclick="handleQuickAction('feynman')"><span>🧑‍🏫</span> Feynman</button>
-                    <button id="notes-btn" onclick="handleQuickAction('notes')"><span>📒</span> Notes</button>
+            <!-- Input Area -->
+            <footer class="gemini-footer">
+                <!-- Image Preview Area -->
+                <div id="preview-area" class="preview-area hidden">
+                    <div class="preview-chip">
+                        <img id="preview-img" src="" alt="Preview">
+                        <button onclick="clearPreview()">✕</button>
+                    </div>
                 </div>
-                
-                <div class="input-wrapper">
-                    <button id="plus-toggle" class="plus-btn" onclick="toggleMenu()">+</button>
-                    <input type="text" id="user-input" placeholder="Ask Edu anything..." autocomplete="off">
-                    <button id="mic-btn" class="mic-btn">🎙️</button>
-                    <button id="send-btn" class="round-btn">➤</button>
+
+                <div class="gemini-input-wrapper">
+                    <button class="gemini-plus" onclick="toggleBottomSheet()">+</button>
+                    <input type="text" id="user-input" placeholder="Ask Edu..." autocomplete="off">
+                    <button class="gemini-mic">🎤</button>
+                    <button id="send-btn" class="gemini-send">➤</button>
                 </div>
             </footer>
             
-            <!-- HIDDEN INPUTS (CRITICAL FOR UPLOADS) -->
-            <input type="file" id="image-upload" accept="image/*" style="display:none;">
-            <input type="file" id="file-upload" accept=".txt" style="display:none;">
+            <!-- HIDDEN INPUTS -->
+            <input type="file" id="camera-upload" accept="image/*" capture="environment" style="display:none;">
+            <input type="file" id="gallery-upload" accept="image/*" style="display:none;">
+            <input type="file" id="file-upload" accept=".txt,.pdf" style="display:none;">
         </div>
 
+        <!-- PLANNER -->
         <div id="planner-screen" class="tab-content hidden">
             <header class="dash-header"><h2>Planner</h2></header>
             <div class="placeholder-content"><p>📅 Coming Soon</p></div>
         </div>
 
+        <!-- PROFILE -->
         <div id="profile-screen" class="tab-content hidden">
-            <header class="dash-header"><h2>My Profile</h2></header>
+            <header class="dash-header"><h2>Profile</h2></header>
             <div class="profile-card">
                 <p><strong>Name:</strong> <span id="prof-name"></span></p>
                 <p><strong>Grade:</strong> <span id="prof-grade"></span></p>
-                <p><strong>Tutor:</strong> <span id="prof-tutor"></span></p>
             </div>
-            <div class="memory-card">
-                <h3>🎙️ Voice Settings</h3>
-                <select id="voice-selector" style="width:100%; padding:12px; border-radius:12px; background:#0f172a; color:white; border:1px solid #334155; margin-top:10px; outline:none;">
-                    <option value="diana">Diana (Clear & Friendly)</option>
-                    <option value="hannah">Hannah (Warm & Calm)</option>
-                    <option value="austin">Austin (Deep)</option>
-                </select>
-            </div>
-            <button class="primary-btn" style="margin: 20px; width: calc(100% - 40px);" onclick="saveSettings()">Save Settings</button>
             <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
         </div>
 
-        <nav id="main-nav" class="bottom-nav">
-            <button id="nav-home" class="nav-item active" onclick="switchTab('dashboard-screen')">
-                <div class="nav-icon">🏠</div><span>Home</span>
-            </button>
-            <button id="nav-planner" class="nav-item" onclick="switchTab('planner-screen')">
-                <div class="nav-icon">📅</div><span>Planner</span>
-            </button>
-            <button id="nav-profile" class="nav-item" onclick="switchTab('profile-screen')">
-                <div class="nav-icon">⚙️</div><span>Profile</span>
-            </button>
+        <!-- BOTTOM NAV (Hidden in Tutor) -->
+        <nav id="main-nav" class="gemini-bottom-nav">
+            <button id="nav-home" class="nav-item active" onclick="switchTab('dashboard-screen')">🏠<span>Home</span></button>
+            <button id="nav-planner" class="nav-item" onclick="switchTab('planner-screen')">📅<span>Planner</span></button>
+            <button id="nav-profile" class="nav-item" onclick="switchTab('profile-screen')">⚙️<span>Profile</span></button>
         </nav>
+    </div>
+
+    <!-- BOTTOM SHEET MODAL (+ MENU) -->
+    <div id="bottom-sheet-overlay" class="sheet-overlay hidden" onclick="toggleBottomSheet()">
+        <div class="bottom-sheet" onclick="event.stopPropagation()">
+            <div class="sheet-handle"></div>
+            <div class="sheet-grid">
+                <button onclick="triggerUpload('camera-upload')"><span>📸</span> Camera</button>
+                <button onclick="triggerUpload('gallery-upload')"><span>🖼️</span> Gallery</button>
+                <button onclick="triggerUpload('file-upload')"><span>📎</span> Files</button>
+                <button id="think-harder-btn" onclick="toggleThinkHarder()"><span>🧠</span> Think</button>
+                <button onclick="handleQuickAction('quiz')"><span>📝</span> Quiz</button>
+                <button onclick="handleQuickAction('feynman')"><span>🧑‍🏫</span> Feynman</button>
+            </div>
+        </div>
     </div>
 
     <script src="config.js"></script>
