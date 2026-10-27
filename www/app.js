@@ -1,35 +1,28 @@
-const chat = document.getElementById("chat");
-const input = document.getElementById("messageInput");
-const form = document.getElementById("chatForm");
-const subject = document.getElementById("subject");
-const attachmentDiv = document.getElementById("attachment");
-const imageInput = document.getElementById("imageInput");
+const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
+const API_URL = 'https://gemini-web2api-for-edu.onrender.com/v1/chat/completions';
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
-let selectedImageBase64 = null;
-let currentSubject = "Physics";
+let generalImageBase64 = null;
+let tutorImageBase64 = null;
+let currentSubject = 'Physics';
+let isProcessing = false;
 
-// --- INITIALIZATION ---
+// --- INIT ---
 function checkAppState() {
     if (!profile) {
-        document.getElementById('onboarding-screen').classList.remove('hidden');
+        document.getElementById('onboarding-screen').style.display = 'block';
         document.getElementById('app-shell').classList.add('hidden');
     } else {
-        document.getElementById('onboarding-screen').classList.add('hidden');
+        document.getElementById('onboarding-screen').style.display = 'none';
         document.getElementById('app-shell').classList.remove('hidden');
         loadDashboard();
-        switchTab('dashboard-screen', document.querySelector('.nav-button'));
+        switchTab('dashboard-screen', document.getElementById('nav-home'));
     }
 }
 
 function finishOnboarding() {
     const name = document.getElementById('onboard-name').value.trim() || 'Student';
-    profile = { 
-        name, 
-        grade: document.getElementById('onboard-grade').value, 
-        curriculum: document.getElementById('onboard-curriculum').value,
-        xp: 0, level: 1 
-    };
+    profile = { name, grade: document.getElementById('onboard-grade').value, curriculum: document.getElementById('onboard-curriculum').value, xp: 0, level: 1 };
     localStorage.setItem('eduProfile', JSON.stringify(profile));
     checkAppState();
 }
@@ -38,13 +31,11 @@ function loadDashboard() {
     document.getElementById('dash-name').textContent = profile.name;
     document.getElementById('dash-context').textContent = `Grade ${profile.grade} • ${profile.curriculum}`;
     document.getElementById('dash-level').textContent = profile.level;
-    document.getElementById('prof-name').textContent = profile.name;
-    document.getElementById('prof-grade').textContent = profile.grade;
+    document.getElementById('prof-name-display').textContent = profile.name;
+    document.getElementById('dash-xp-bar').style.width = `${(profile.xp % (profile.level * 100)) / (profile.level * 100) * 100}%`;
 }
 
-function resetApp() {
-    if (confirm("Erase all data?")) { localStorage.clear(); location.reload(); }
-}
+function resetApp() { if (confirm("Erase all data?")) { localStorage.clear(); location.reload(); } }
 
 // --- NAVIGATION ---
 function switchTab(screenId, btn) {
@@ -57,23 +48,32 @@ function switchTab(screenId, btn) {
     }
 }
 
-function openTutor(sub) {
+// --- SUBJECT TUTOR LOGIC ---
+function openSubject(sub) {
     currentSubject = sub;
-    subject.value = sub;
+    document.getElementById('subject').value = sub;
     document.getElementById('current-subject-title').textContent = sub;
     switchTab('tutor-screen');
     
-    // Auto-start lesson if empty
-    if (chat.innerHTML.trim() === '') {
-        addMessage(`Let's study ${sub} for Grade ${profile.grade}. Introduce the topic we should start with.`, "user");
-        sendToAI(`Let's study ${sub} for Grade ${profile.grade}. Introduce the topic we should start with.`, null);
+    const container = document.getElementById('tutor-chat-container');
+    if (container.innerHTML.trim() === '' || container.querySelector('.date-label')) {
+        container.innerHTML = `<div class="date-label">NEW SESSION</div>`;
+        addMessage(`Hello! I am your ${sub} tutor. Ask me a question or upload an image to begin.`, 'ai', container);
     }
 }
 
+function changeSubject(sub) {
+    currentSubject = sub;
+    document.getElementById('current-subject-title').textContent = sub;
+    document.getElementById('tutor-chat-container').innerHTML = `<div class="date-label">NEW SESSION</div>`;
+    addMessage(`Let's study ${sub}. What do you want to learn?`, 'ai', document.getElementById('tutor-chat-container'));
+}
+
 // --- CHAT UI ---
-function addMessage(text, sender = "user") {
+function addMessage(text, sender, container) {
     const article = document.createElement("article");
     article.className = "message";
+    if (sender === "user") article.classList.add("user-message");
 
     const avatar = document.createElement("div");
     avatar.className = "avatar";
@@ -82,11 +82,7 @@ function addMessage(text, sender = "user") {
     const bubble = document.createElement("div");
     bubble.className = "bubble";
 
-    if (sender === "user") {
-        article.classList.add("user-message");
-        bubble.innerHTML = "";
-        bubble.style.borderRadius = "17px 5px 17px 17px";
-    } else {
+    if (sender === "ai") {
         const label = document.createElement("div");
         label.className = "message-label";
         label.textContent = "EDUSCHOOL TUTOR";
@@ -94,120 +90,166 @@ function addMessage(text, sender = "user") {
     }
 
     const paragraph = document.createElement("p");
-    paragraph.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Basic bold parsing
+    paragraph.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
     bubble.appendChild(paragraph);
 
     const time = document.createElement("div");
     time.className = "timestamp";
-    time.textContent = sender === "ai" ? "AI tutor" : "Just now";
+    time.textContent = "Just now";
     bubble.appendChild(time);
 
-    if (sender === "ai") {
-        article.append(avatar, bubble);
-    } else {
-        article.appendChild(bubble);
-    }
+    if (sender === "ai") article.append(avatar, bubble);
+    else article.appendChild(bubble);
 
-    chat.appendChild(article);
-    article.scrollIntoView({ behavior: "smooth", block: "end" });
+    container.appendChild(article);
+    container.scrollTop = container.scrollHeight;
 }
 
-// --- IMAGE UPLOAD LOGIC ---
-imageInput.addEventListener("change", function() {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        selectedImageBase64 = e.target.result;
-        attachmentDiv.hidden = false;
-        attachmentDiv.textContent = "📎 Image attached. Ask a question or hit send!";
-    };
-    reader.readAsDataURL(file);
+// --- IMAGE HANDLING ---
+function setupImageListener(inputId, type) {
+    document.getElementById(inputId).addEventListener("change", function() {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (type === 'general') {
+                generalImageBase64 = e.target.result;
+                document.getElementById('general-preview-img').src = generalImageBase64;
+                document.getElementById('general-attachment').classList.remove('hidden');
+            } else {
+                tutorImageBase64 = e.target.result;
+                document.getElementById('tutor-preview-img').src = tutorImageBase64;
+                document.getElementById('tutor-attachment').classList.remove('hidden');
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+setupImageListener('generalImageInput', 'general');
+setupImageListener('tutorImageInput', 'tutor');
+
+function clearImage(type) {
+    if (type === 'general') {
+        generalImageBase64 = null;
+        document.getElementById('general-attachment').classList.add('hidden');
+        document.getElementById('generalImageInput').value = "";
+    } else {
+        tutorImageBase64 = null;
+        document.getElementById('tutor-attachment').classList.add('hidden');
+        document.getElementById('tutorImageInput').value = "";
+    }
+}
+
+// --- FORM SUBMISSIONS ---
+document.getElementById("generalForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const input = document.getElementById("generalInput");
+    const msg = input.value.trim();
+    if (!msg && !generalImageBase64) return;
+
+    const container = document.getElementById('general-chat-container');
+    addMessage(msg || "Solve this image.", "user", container);
+    
+    input.value = ""; input.style.height = "auto";
+    const img = generalImageBase64;
+    clearImage('general');
+
+    // Generic AI Prompt
+    let sysPrompt = `You are a helpful, intelligent AI assistant.`;
+    await sendToAI(msg, img, sysPrompt, container);
 });
 
-// --- FORM SUBMIT & AI FETCH ---
-form.addEventListener("submit", async function(event) {
-    event.preventDefault();
-    const message = input.value.trim();
-    if (!message && !selectedImageBase64) return;
+document.getElementById("tutorForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const input = document.getElementById("tutorInput");
+    const msg = input.value.trim();
+    if (!msg && !tutorImageBase64) return;
 
-    const displayMsg = message || "Solve this image.";
-    addMessage(displayMsg, "user");
+    const container = document.getElementById('tutor-chat-container');
+    addMessage(msg || "Solve this image.", "user", container);
     
-    input.value = "";
-    input.style.height = "auto";
-    attachmentDiv.hidden = true;
-    
-    const imgToSend = selectedImageBase64;
-    selectedImageBase64 = null;
-    imageInput.value = "";
+    input.value = ""; input.style.height = "auto";
+    const img = tutorImageBase64;
+    clearImage('tutor');
 
-    await sendToAI(message, imgToSend);
+    // Subject-specific Prompt
+    let sysPrompt = `You are an expert AI ${currentSubject} tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: friendly and encouraging.`;
+    await sendToAI(msg, img, sysPrompt, container);
 });
 
-async function sendToAI(message, imageBase64) {
+// --- AI FETCH ---
+async function sendToAI(message, imageBase64, systemPrompt, container) {
+    if (isProcessing) return;
+    isProcessing = true;
+
     const loadingId = "loading-" + Date.now();
     const loading = document.createElement("article");
     loading.className = "message";
     loading.id = loadingId;
     loading.innerHTML = `<div class="avatar">✦</div><div class="bubble"><p>Thinking...</p></div>`;
-    chat.appendChild(loading);
-    chat.scrollTop = chat.scrollHeight;
-
-    let systemPrompt = `You are an expert AI ${currentSubject} tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: friendly, modern, and encouraging.`;
-    systemPrompt += ` \nCRITICAL: Use Markdown for formatting (bold, bullet points). Do not use tables.`;
+    container.appendChild(loading);
+    container.scrollTop = container.scrollHeight;
 
     let messages = [{ role: 'system', content: systemPrompt }];
-    // Add recent chat history
-    const historyMsgs = Array.from(chat.querySelectorAll('.message')).slice(-6);
-    historyMsgs.forEach(msg => {
-        const isUser = msg.classList.contains('user-message');
-        const text = msg.querySelector('.bubble p')?.innerText || "";
+    
+    // Get last 6 messages for context
+    const historyMsgs = Array.from(container.querySelectorAll('.message')).slice(-7, -1);
+    historyMsgs.forEach(m => {
+        const isUser = m.classList.contains('user-message');
+        const text = m.querySelector('.bubble p')?.innerText || "";
         if(text) messages.push({ role: isUser ? 'user' : 'assistant', content: text });
     });
 
     if (imageBase64) {
-        messages.push({
-            role: 'user',
-            content: [
-                { type: "text", text: message || "Solve the problem in this image." },
-                { type: "image_url", image_url: { url: imageBase64 } }
-            ]
-        });
+        messages.push({ role: 'user', content: [{ type: "text", text: message || "Solve this." }, { type: "image_url", image_url: { url: imageBase64 } }] });
     } else {
         messages.push({ role: 'user', content: message });
     }
 
-    // FIXING THE UNKNOWN MODEL ERROR: Use standard Gemini models via the proxy
-    const modelToUse = imageBase64 ? 'gemini-3.7-flash' : 'gemini-3.7-flash'; 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for Render wake up
 
     try {
-        const res = await fetch('https://gemini-web2api-for-edu.onrender.com/v1/chat/completions', {
+        const res = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: modelToUse, messages, temperature: 0.7, max_tokens: 2000 })
+            body: JSON.stringify({ model: 'gemini-3.7-flash', messages, temperature: 0.7, max_tokens: 2000 }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         const data = await res.json();
         document.getElementById(loadingId)?.remove();
 
         if (!res.ok || data.error) {
-            throw new Error(data.error?.message || "Server is waking up. Wait 50s and try again.");
+            throw new Error(data.error?.message || "Server is waking up. Tap send again.");
         }
 
         const aiReply = data.choices[0].message.content;
-        addMessage(aiReply, "ai");
+        addMessage(aiReply, "ai", container);
 
     } catch (error) {
         document.getElementById(loadingId)?.remove();
-        addMessage(`⚠️ **Error:** ${error.message}`, "ai");
+        const errMsg = error.name === 'AbortError' ? "Server timed out. Please try again." : error.message;
+        addMessage(`⚠️ **Error:** ${errMsg}`, "ai", container);
+    } finally {
+        isProcessing = false;
     }
 }
 
 // --- UTILS ---
-function usePrompt(text) { input.value = text; input.focus(); }
-function showMore() { alert("Settings menu coming soon!"); }
-input.addEventListener("input", function() { this.style.height = "auto"; this.style.height = Math.min(this.scrollHeight, 100) + "px"; });
-subject.addEventListener("change", function() { currentSubject = this.value; });
+function usePrompt(text) {
+    const input = document.getElementById("tutorInput");
+    input.value = text; input.focus(); input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 100) + "px";
+}
+function showMore() { alert("Options coming soon."); }
+
+// Auto-resize textareas
+document.querySelectorAll('textarea').forEach(ta => {
+    ta.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+});
 
 checkAppState();
