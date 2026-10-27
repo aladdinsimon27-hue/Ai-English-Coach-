@@ -1,3 +1,7 @@
 window.APP_CONFIG = {
-    GROQ_API_KEY: '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'
+    primaryApiUrl: 'https://gemini-web2api-for-edu.onrender.com/v1/chat/completions',
+    backupApiUrl: 'https://api.groq.com/openai/v1/chat/completions',
+    primaryModel: 'gemini-3.6-flash',
+    backupModel: 'llama-3.1-8b-instant',
+    groqApiKey: localStorage.getItem('groq_api_key') || ''
 };
