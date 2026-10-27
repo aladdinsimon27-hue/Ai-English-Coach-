@@ -1,4 +1,4 @@
-// AI EduSchool - Clean Navigation, Pause/Resume Voice
+// AI EduSchool - Fixed Uploads, Fixed AI Interaction
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -17,41 +17,39 @@ let isProcessing = false;
 let isThinkHarder = false;
 let isPaused = false;
 
-// --- SUBJECT-SPECIFIC HISTORY ---
+// --- SUBJECT HISTORY ---
 function loadHistoryForSubject(subject) {
     currentSubject = subject;
     chatHistory = JSON.parse(localStorage.getItem(`tutorHistory_${subject}`)) || [];
     renderHistory();
 }
-function saveHistory() {
-    localStorage.setItem(`tutorHistory_${currentSubject}`, JSON.stringify(chatHistory));
+function saveHistory() { localStorage.setItem(`tutorHistory_${currentSubject}`, JSON.stringify(chatHistory)); }
+
+// --- MENU & UPLOADS ---
+function toggleMenu() { plusMenu.classList.toggle('hidden'); }
+
+function triggerUpload(id) {
+    const fileInput = document.getElementById(id);
+    if (fileInput) {
+        fileInput.click();
+    } else {
+        alert("Error: File input not found.");
+    }
+    toggleMenu();
 }
 
-// --- MENU & UI ---
-function toggleMenu() { plusMenu.classList.toggle('hidden'); }
-function triggerUpload(id) { document.getElementById(id).click(); toggleMenu(); }
 function toggleThinkHarder() {
     isThinkHarder = !isThinkHarder;
     const btn = document.getElementById('think-harder-btn');
-    if (isThinkHarder) {
-        btn.classList.add('active'); btn.innerHTML = '<span>🧠</span> Think Harder (ON)';
-    } else {
-        btn.classList.remove('active'); btn.innerHTML = '<span>🧠</span> Think Harder';
-    }
+    if (isThinkHarder) { btn.classList.add('active'); btn.innerHTML = '<span>🧠</span> Think ON'; } 
+    else { btn.classList.remove('active'); btn.innerHTML = '<span>🧠</span> Think'; }
     toggleMenu();
 }
 
 // --- VOICE CONTROLS ---
 function togglePauseVoice() {
-    if (ttsAudio.paused) {
-        ttsAudio.play();
-        pauseVoiceBtn.innerHTML = '⏸️';
-        isPaused = false;
-    } else {
-        ttsAudio.pause();
-        pauseVoiceBtn.innerHTML = '▶️';
-        isPaused = true;
-    }
+    if (ttsAudio.paused) { ttsAudio.play(); pauseVoiceBtn.innerHTML = '⏸️'; isPaused = false; } 
+    else { ttsAudio.pause(); pauseVoiceBtn.innerHTML = '▶️'; isPaused = true; }
 }
 function stopVoice() {
     isSpeaking = false; speechQueue = []; ttsAudio.pause();
@@ -75,7 +73,7 @@ function parseMarkdown(text) {
     return html;
 }
 
-// --- FAST TTS (Pause & Resume supported) ---
+// --- FAST TTS ---
 let speechQueue = [], isSpeaking = false;
 function cleanTextForTTS(text) {
     return text.replace(/\\\((.*?)\\\)/g, '$1').replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '$1 over $2').replace(/[*#_|>]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -111,12 +109,7 @@ async function playNextChunk() {
         const audioBlob = await res.blob();
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => { 
-            if(isSpeaking) { 
-                ttsAudio.src = reader.result; 
-                ttsAudio.play().catch(stopVoice); 
-            } 
-        };
+        reader.onloadend = () => { if(isSpeaking) { ttsAudio.src = reader.result; ttsAudio.play().catch(stopVoice); } };
     } catch (error) { stopVoice(); }
 }
 ttsAudio.onended = () => { if (isSpeaking && !isPaused) playNextChunk(); };
@@ -165,24 +158,17 @@ function addXP(amount) {
     localStorage.setItem('eduProfile', JSON.stringify(profile)); loadDashboard();
 }
 
-// --- NAVIGATION (HIDES BOTTOM NAV IN CHAT) ---
+// --- NAVIGATION ---
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
-    
-    // Update active nav styling
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     if(tabId === 'dashboard-screen') document.getElementById('nav-home').classList.add('active');
     if(tabId === 'planner-screen') document.getElementById('nav-planner').classList.add('active');
     if(tabId === 'profile-screen') document.getElementById('nav-profile').classList.add('active');
 
-    // Hide bottom nav when entering the chat screen!
-    if (tabId === 'tutor-screen') {
-        mainNav.classList.add('hidden'); // Hide nav
-    } else {
-        mainNav.classList.remove('hidden'); // Show nav on all other screens
-        stopVoice();
-    }
+    if (tabId === 'tutor-screen') { mainNav.classList.add('hidden'); } 
+    else { mainNav.classList.remove('hidden'); stopVoice(); }
 }
 
 function openTutor(subject) {
@@ -192,7 +178,7 @@ function openTutor(subject) {
     if (chatHistory.length === 0) { handleSend(`Let's study ${subject} for Grade ${profile.grade}. Introduce the topic we should start with.`); }
 }
 
-// --- UI RENDER ---
+// --- RENDER UI ---
 function renderHistory() {
     chatContainer.innerHTML = '';
     if (chatHistory.length === 0) {
@@ -210,7 +196,7 @@ function addMessageToUI(text, sender, isMarkdown = false) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// --- UPLOADS & TOOLS ---
+// --- UPLOAD LISTENERS ---
 document.getElementById('file-upload').addEventListener('change', (event) => {
     const file = event.target.files[0]; if (!file) return;
     const reader = new FileReader();
@@ -223,6 +209,7 @@ document.getElementById('image-upload').addEventListener('change', (event) => {
     reader.onload = (e) => handleSend("I have uploaded an image of a problem. Please read it carefully and solve it step-by-step.", e.target.result);
     reader.readAsDataURL(file);
 });
+
 function handleQuickAction(action) {
     toggleMenu();
     if (action === 'quiz') handleSend("Quiz me on this subject. Give me 3 multiple-choice questions.");
@@ -260,7 +247,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
         messages.push({ role: 'user', content: text });
     }
 
-    let modelToUse = 'gemini-3.6-flash'; 
+    let modelToUse = 'gemini-3.7-flash'; 
     if (imageBase64) modelToUse = 'llama-3.2-11b-vision-instruct';
     else if (isThinkHarder) modelToUse = 'gemini-3.5-flash-thinking'; 
 
@@ -272,7 +259,14 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
 
         const data = await res.json();
         document.getElementById('think').remove();
-        if (data.error) { addMessageToUI(`Error: ${data.error.message}`, 'ai'); isProcessing = false; return; }
+        
+        // CRITICAL: If Render server is sleeping or errors out
+        if (!res.ok || data.error) { 
+            const errorMsg = data.error ? data.error.message : "Server is waking up (Free Tier). Please wait 50 seconds and try again.";
+            addMessageToUI(`⚠️ Error: ${errorMsg}`, 'ai'); 
+            isProcessing = false; 
+            return; 
+        }
 
         const aiResponse = data.choices[0].message.content;
         
@@ -284,7 +278,7 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
 
     } catch (e) {
         document.getElementById('think').remove();
-        addMessageToUI("Network error.", 'ai');
+        addMessageToUI("⚠️ Network Error. The Render server might be asleep. Please wait 1 minute and try again.", 'ai');
     }
     isProcessing = false;
 }

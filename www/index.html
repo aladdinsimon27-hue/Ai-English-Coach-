@@ -58,7 +58,6 @@
 
         <div id="tutor-screen" class="tab-content hidden">
             <header class="tutor-header">
-                <!-- Back arrow without text -->
                 <button class="back-btn" onclick="switchTab('dashboard-screen')">↩️</button>
                 <div class="header-title">
                     <h2>Ask Edu</h2>
@@ -73,14 +72,14 @@
             <main id="chat-container"></main>
 
             <footer class="chat-footer">
+                <!-- The + Menu Popup (Grid Layout) -->
                 <div id="plus-menu" class="plus-menu hidden">
-                    <button onclick="triggerUpload('image-upload')"><span>📸</span> Camera / Photos</button>
-                    <button onclick="triggerUpload('file-upload')"><span>📎</span> Upload File</button>
-                    <button id="think-harder-btn" onclick="toggleThinkHarder()"><span>🧠</span> Think Harder</button>
-                    <div class="divider"></div>
-                    <button id="quiz-btn" onclick="handleQuickAction('quiz')"><span>📝</span> Quiz Me</button>
-                    <button id="feynman-btn" onclick="handleQuickAction('feynman')"><span>🧑‍🏫</span> Feynman Mode</button>
-                    <button id="notes-btn" onclick="handleQuickAction('notes')"><span>📒</span> Make Notes</button>
+                    <button onclick="triggerUpload('image-upload')"><span>📸</span> Camera</button>
+                    <button onclick="triggerUpload('file-upload')"><span>📎</span> File</button>
+                    <button id="think-harder-btn" onclick="toggleThinkHarder()"><span>🧠</span> Think</button>
+                    <button id="quiz-btn" onclick="handleQuickAction('quiz')"><span>📝</span> Quiz</button>
+                    <button id="feynman-btn" onclick="handleQuickAction('feynman')"><span>🧑‍🏫</span> Feynman</button>
+                    <button id="notes-btn" onclick="handleQuickAction('notes')"><span>📒</span> Notes</button>
                 </div>
                 
                 <div class="input-wrapper">
@@ -91,41 +90,38 @@
                 </div>
             </footer>
             
+            <!-- HIDDEN INPUTS (CRITICAL FOR UPLOADS) -->
             <input type="file" id="image-upload" accept="image/*" style="display:none;">
             <input type="file" id="file-upload" accept=".txt" style="display:none;">
         </div>
 
         <div id="planner-screen" class="tab-content hidden">
-            <header><h2>My Study Planner</h2></header>
-            <div class="placeholder-content"><p>📅 Your personalized AI study schedule will appear here.</p></div>
+            <header class="dash-header"><h2>Planner</h2></header>
+            <div class="placeholder-content"><p>📅 Coming Soon</p></div>
         </div>
 
         <div id="profile-screen" class="tab-content hidden">
-            <header><h2>My Profile</h2></header>
+            <header class="dash-header"><h2>My Profile</h2></header>
             <div class="profile-card">
                 <p><strong>Name:</strong> <span id="prof-name"></span></p>
                 <p><strong>Grade:</strong> <span id="prof-grade"></span></p>
-                <p><strong>Tutor Persona:</strong> <span id="prof-tutor"></span></p>
+                <p><strong>Tutor:</strong> <span id="prof-tutor"></span></p>
             </div>
             <div class="memory-card">
                 <h3>🎙️ Voice Settings</h3>
-                <select id="voice-selector" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:white; border:1px solid var(--border); margin-top:10px;">
+                <select id="voice-selector" style="width:100%; padding:12px; border-radius:12px; background:#0f172a; color:white; border:1px solid #334155; margin-top:10px; outline:none;">
                     <option value="diana">Diana (Clear & Friendly)</option>
                     <option value="hannah">Hannah (Warm & Calm)</option>
-                    <option value="austin">Austin (Deep & Authoritative)</option>
+                    <option value="austin">Austin (Deep)</option>
                 </select>
             </div>
             <button class="primary-btn" style="margin: 20px; width: calc(100% - 40px);" onclick="saveSettings()">Save Settings</button>
             <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
         </div>
 
-        <!-- BOTTOM NAVIGATION -->
         <nav id="main-nav" class="bottom-nav">
             <button id="nav-home" class="nav-item active" onclick="switchTab('dashboard-screen')">
                 <div class="nav-icon">🏠</div><span>Home</span>
-            </button>
-            <button id="nav-tutor" class="nav-item" onclick="switchTab('tutor-screen')">
-                <div class="nav-icon">💬</div><span>Tutor</span>
             </button>
             <button id="nav-planner" class="nav-item" onclick="switchTab('planner-screen')">
                 <div class="nav-icon">📅</div><span>Planner</span>
