@@ -57,20 +57,22 @@
         </div>
 
         <div id="tutor-screen" class="tab-content hidden">
-            <!-- Clean header, no timer, no red stop button -->
             <header class="tutor-header">
-                <button class="back-btn" onclick="switchTab('dashboard-screen')">❮</button>
+                <!-- Back arrow without text -->
+                <button class="back-btn" onclick="switchTab('dashboard-screen')">↩️</button>
                 <div class="header-title">
-                    <h2>Ask Edu For Knowledge</h2>
+                    <h2>Ask Edu</h2>
                     <span id="current-subject-title">General</span>
                 </div>
-                <div style="width: 30px;"></div> <!-- Spacer for centering -->
+                <div class="voice-controls">
+                    <button id="pause-voice-btn" class="icon-btn hidden" onclick="togglePauseVoice()">⏸️</button>
+                    <button id="stop-voice-btn" class="icon-btn hidden" onclick="stopVoice()">🛑</button>
+                </div>
             </header>
 
             <main id="chat-container"></main>
 
             <footer class="chat-footer">
-                <!-- The + Menu Popup -->
                 <div id="plus-menu" class="plus-menu hidden">
                     <button onclick="triggerUpload('image-upload')"><span>📸</span> Camera / Photos</button>
                     <button onclick="triggerUpload('file-upload')"><span>📎</span> Upload File</button>
@@ -99,20 +101,11 @@
         </div>
 
         <div id="profile-screen" class="tab-content hidden">
-            <header><h2>My Profile & Settings</h2></header>
+            <header><h2>My Profile</h2></header>
             <div class="profile-card">
                 <p><strong>Name:</strong> <span id="prof-name"></span></p>
                 <p><strong>Grade:</strong> <span id="prof-grade"></span></p>
                 <p><strong>Tutor Persona:</strong> <span id="prof-tutor"></span></p>
-            </div>
-            
-            <div class="memory-card">
-                <h3>🤖 Tutor Persona</h3>
-                <select id="tutor-selector" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:white; border:1px solid var(--border); margin-top:10px;">
-                    <option value="Nova">Nova (Friendly & Patient)</option>
-                    <option value="Atlas">Atlas (Strict & Socratic)</option>
-                    <option value="Pixel">Pixel (Funny & Relatable)</option>
-                </select>
             </div>
             <div class="memory-card">
                 <h3>🎙️ Voice Settings</h3>
@@ -122,16 +115,12 @@
                     <option value="austin">Austin (Deep & Authoritative)</option>
                 </select>
             </div>
-            <div class="memory-card">
-                <h3>🧠 AI Memory</h3>
-                <textarea id="ai-memory-input" placeholder="e.g., I struggle with Algebra..."></textarea>
-            </div>
             <button class="primary-btn" style="margin: 20px; width: calc(100% - 40px);" onclick="saveSettings()">Save Settings</button>
             <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
         </div>
 
-        <!-- NEW MODERN BOTTOM NAVIGATION -->
-        <nav class="bottom-nav">
+        <!-- BOTTOM NAVIGATION -->
+        <nav id="main-nav" class="bottom-nav">
             <button id="nav-home" class="nav-item active" onclick="switchTab('dashboard-screen')">
                 <div class="nav-icon">🏠</div><span>Home</span>
             </button>

@@ -1,4 +1,4 @@
-// AI EduSchool - Fixed Text Structure, Emojis, Model Rate Limit, and Modern UI
+// AI EduSchool - Clean Navigation, Pause/Resume Voice
 
 const GROQ_API_KEY = window.APP_CONFIG ? window.APP_CONFIG.GROQ_API_KEY : 'NO_KEY';
 const chatContainer = document.getElementById('chat-container');
@@ -6,12 +6,16 @@ const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const ttsAudio = document.getElementById('tts-audio');
 const plusMenu = document.getElementById('plus-menu');
+const mainNav = document.getElementById('main-nav');
+const pauseVoiceBtn = document.getElementById('pause-voice-btn');
+const stopVoiceBtn = document.getElementById('stop-voice-btn');
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
 let currentSubject = 'General';
 let chatHistory = [];
 let isProcessing = false;
 let isThinkHarder = false;
+let isPaused = false;
 
 // --- SUBJECT-SPECIFIC HISTORY ---
 function loadHistoryForSubject(subject) {
@@ -24,24 +28,35 @@ function saveHistory() {
 }
 
 // --- MENU & UI ---
-function toggleMenu() {
-    plusMenu.classList.toggle('hidden');
-}
-function triggerUpload(id) {
-    document.getElementById(id).click();
-    toggleMenu();
-}
+function toggleMenu() { plusMenu.classList.toggle('hidden'); }
+function triggerUpload(id) { document.getElementById(id).click(); toggleMenu(); }
 function toggleThinkHarder() {
     isThinkHarder = !isThinkHarder;
     const btn = document.getElementById('think-harder-btn');
     if (isThinkHarder) {
-        btn.classList.add('active');
-        btn.innerHTML = '<span>🧠</span> Think Harder (ON)';
+        btn.classList.add('active'); btn.innerHTML = '<span>🧠</span> Think Harder (ON)';
     } else {
-        btn.classList.remove('active');
-        btn.innerHTML = '<span>🧠</span> Think Harder';
+        btn.classList.remove('active'); btn.innerHTML = '<span>🧠</span> Think Harder';
     }
     toggleMenu();
+}
+
+// --- VOICE CONTROLS ---
+function togglePauseVoice() {
+    if (ttsAudio.paused) {
+        ttsAudio.play();
+        pauseVoiceBtn.innerHTML = '⏸️';
+        isPaused = false;
+    } else {
+        ttsAudio.pause();
+        pauseVoiceBtn.innerHTML = '▶️';
+        isPaused = true;
+    }
+}
+function stopVoice() {
+    isSpeaking = false; speechQueue = []; ttsAudio.pause();
+    pauseVoiceBtn.classList.add('hidden'); stopVoiceBtn.classList.add('hidden');
+    isPaused = false; pauseVoiceBtn.innerHTML = '⏸️';
 }
 
 // --- MARKDOWN PARSER ---
@@ -55,15 +70,13 @@ function parseMarkdown(text) {
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
         .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
-        .replace(/^\s*\*\s+(.*$)/gim, '<li>$1</li>')
         .replace(/\n/g, '<br>');
     html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
     return html;
 }
 
-// --- FAST TTS (Kept from previous working version) ---
-let speechQueue = [];
-let isSpeaking = false;
+// --- FAST TTS (Pause & Resume supported) ---
+let speechQueue = [], isSpeaking = false;
 function cleanTextForTTS(text) {
     return text.replace(/\\\((.*?)\\\)/g, '$1').replace(/\\frac\{(.*?)\}\{(.*?)\}/g, '$1 over $2').replace(/[*#_|>]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -79,9 +92,12 @@ function splitTextIntoChunks(text) {
 }
 async function playGroqTTS(text) {
     ttsAudio.pause(); speechQueue = splitTextIntoChunks(text);
-    if (speechQueue.length > 0) { isSpeaking = true; playNextChunk(); }
+    if (speechQueue.length > 0) { 
+        isSpeaking = true; 
+        pauseVoiceBtn.classList.remove('hidden'); stopVoiceBtn.classList.remove('hidden'); 
+        playNextChunk(); 
+    }
 }
-function stopVoice() { isSpeaking = false; speechQueue = []; ttsAudio.pause(); }
 async function playNextChunk() {
     if (!isSpeaking || speechQueue.length === 0) { stopVoice(); return; }
     const chunk = speechQueue.shift();
@@ -95,12 +111,17 @@ async function playNextChunk() {
         const audioBlob = await res.blob();
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => { if(isSpeaking) { ttsAudio.src = reader.result; ttsAudio.play().catch(stopVoice); } };
+        reader.onloadend = () => { 
+            if(isSpeaking) { 
+                ttsAudio.src = reader.result; 
+                ttsAudio.play().catch(stopVoice); 
+            } 
+        };
     } catch (error) { stopVoice(); }
 }
-ttsAudio.onended = () => { if (isSpeaking) playNextChunk(); };
+ttsAudio.onended = () => { if (isSpeaking && !isPaused) playNextChunk(); };
 
-// --- APP INITIALIZATION ---
+// --- INITIALIZATION ---
 function checkAppState() {
     if (!profile) {
         document.getElementById('onboarding-screen').classList.remove('hidden');
@@ -136,10 +157,7 @@ function loadDashboard() {
     document.getElementById('tutor-selector').value = profile.tutor || 'Nova';
     updateXPUI();
 }
-function updateXPUI() {
-    if (!profile) return;
-    document.getElementById('dash-xp-bar').style.width = `${(profile.xp % (profile.level * 100)) / (profile.level * 100) * 100}%`;
-}
+function updateXPUI() { if (!profile) return; document.getElementById('dash-xp-bar').style.width = `${(profile.xp % (profile.level * 100)) / (profile.level * 100) * 100}%`; }
 function addXP(amount) {
     if (!profile) return;
     profile.xp += amount;
@@ -147,7 +165,7 @@ function addXP(amount) {
     localStorage.setItem('eduProfile', JSON.stringify(profile)); loadDashboard();
 }
 
-// --- NAVIGATION ---
+// --- NAVIGATION (HIDES BOTTOM NAV IN CHAT) ---
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
@@ -155,23 +173,26 @@ function switchTab(tabId) {
     // Update active nav styling
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     if(tabId === 'dashboard-screen') document.getElementById('nav-home').classList.add('active');
-    if(tabId === 'tutor-screen') document.getElementById('nav-tutor').classList.add('active');
     if(tabId === 'planner-screen') document.getElementById('nav-planner').classList.add('active');
     if(tabId === 'profile-screen') document.getElementById('nav-profile').classList.add('active');
 
-    if (tabId !== 'tutor-screen') { stopVoice(); }
+    // Hide bottom nav when entering the chat screen!
+    if (tabId === 'tutor-screen') {
+        mainNav.classList.add('hidden'); // Hide nav
+    } else {
+        mainNav.classList.remove('hidden'); // Show nav on all other screens
+        stopVoice();
+    }
 }
 
 function openTutor(subject) {
     loadHistoryForSubject(subject);
     document.getElementById('current-subject-title').textContent = subject;
     switchTab('tutor-screen');
-    if (chatHistory.length === 0) {
-        handleSend(`Let's study ${subject} for Grade ${profile.grade}. Introduce the topic we should start with.`);
-    }
+    if (chatHistory.length === 0) { handleSend(`Let's study ${subject} for Grade ${profile.grade}. Introduce the topic we should start with.`); }
 }
 
-// --- RENDER & UI ---
+// --- UI RENDER ---
 function renderHistory() {
     chatContainer.innerHTML = '';
     if (chatHistory.length === 0) {
@@ -225,19 +246,10 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
     think.className = 'message ai-message'; think.textContent = 'Thinking...'; think.id = 'think';
     chatContainer.appendChild(think); chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    // STRICT INSTRUCTIONS FOR AI FORMATTING
     let systemPrompt = `You are ${profile.tutor}, an expert AI ${currentSubject} tutor for a Grade ${profile.grade} student in the ${profile.curriculum}. Tone: ${profile.tutor === 'Nova' ? 'friendly' : profile.tutor === 'Atlas' ? 'strict' : 'funny'}.`;
     if (profile.memory) systemPrompt += ` \nCRITICAL STUDENT MEMORY: ${profile.memory}. Adapt your teaching to this.`;
-    
-    if (isThinkHarder) systemPrompt += ` \nCRITICAL: This is a complex problem. Think step-by-step, verify your math/logic internally before answering, and provide a highly detailed, flawless explanation.`;
-    
-    // FORBID TABLES AND DEMAND EMOJIS
-    systemPrompt += ` \nCRITICAL FORMATTING RULES:
-    1. NEVER use Markdown tables (no | character). Use bullet points instead.
-    2. Use bold text for key terms.
-    3. Include fun, relevant emojis in almost every paragraph to make it engaging.
-    4. Use plain text math (e.g., 'x^2', 'F = ma'). Do not use LaTeX.
-    5. If providing video links, use [Title](URL).`;
+    if (isThinkHarder) systemPrompt += ` \nCRITICAL: This is a complex problem. Think step-by-step, verify your math/logic internally before answering.`;
+    systemPrompt += ` \nCRITICAL FORMATTING RULES: 1. NEVER use Markdown tables. 2. Use bold text for key terms. 3. Include fun emojis in almost every paragraph. 4. Use plain text math (e.g., 'x^2'). 5. If providing video links, use [Title](URL).`;
 
     let messages = [{ role: 'system', content: systemPrompt }];
     chatHistory.slice(-10).forEach(m => messages.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
@@ -248,10 +260,9 @@ async function handleSend(customPrompt = null, imageBase64 = null) {
         messages.push({ role: 'user', content: text });
     }
 
-    // USE LIGHTER MODEL UNLESS 'THINK HARDER' IS ON
-    let modelToUse = 'gemini-3.6-flash'; // 500k TPD limit, very fast
+    let modelToUse = 'gemini-3.6-flash'; 
     if (imageBase64) modelToUse = 'llama-3.2-11b-vision-instruct';
-    else if (isThinkHarder) modelToUse = 'gemini-3.5-flash-thinking'; // 200k TPD limit, very smart
+    else if (isThinkHarder) modelToUse = 'gemini-3.5-flash-thinking'; 
 
     try {
         const res = await fetch('https://gemini-web2api-for-edu.onrender.com/v1/chat/completions', {
