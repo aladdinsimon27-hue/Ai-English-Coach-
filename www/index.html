@@ -1,139 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI EduSchool</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#071225">
+<title>AI EduSchool</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- ONBOARDING -->
-    <div id="onboarding-screen" class="screen hidden">
-        <div class="onboarding-container">
-            <h1>Welcome to AI EduSchool</h1>
-            <p>Let's build your personalized learning path.</p>
-            <label>What is your name?</label>
-            <input type="text" id="onboard-name" placeholder="Enter your name">
-            <label>What grade are you in?</label>
-            <select id="onboard-grade">
-                <option value="9">Grade 9</option>
-                <option value="10">Grade 10</option>
-                <option value="11">Grade 11</option>
-                <option value="12">Grade 12</option>
-            </select>
-            <label>Select your Curriculum:</label>
-            <select id="onboard-curriculum">
-                <option value="Ethiopian National Curriculum">Ethiopian National Curriculum</option>
-                <option value="International (IGCSE/IB)">International (IGCSE/IB)</option>
-            </select>
-            <button class="primary-btn" onclick="finishOnboarding()">Create My School</button>
-        </div>
-    </div>
-
-    <!-- MAIN APP -->
-    <div id="app-shell" class="screen hidden">
-        
-        <!-- DASHBOARD -->
-        <div id="dashboard-screen" class="tab-content">
-            <header class="dash-header">
-                <div>
-                    <h2>Hello, <span id="dash-name">Student</span>! 👋</h2>
-                    <p id="dash-context">Grade 10 • Curriculum</p>
-                </div>
-                <div class="level-badge">Lvl <span id="dash-level">1</span></div>
-            </header>
-            <div class="xp-banner">
-                <p>Daily Goal Progress</p>
-                <div class="xp-progress-track"><div id="dash-xp-bar" class="xp-progress-fill"></div></div>
+<div class="app hidden" id="app-shell">
+    
+    <!-- DASHBOARD SCREEN -->
+    <div id="dashboard-screen" class="screen active">
+        <header class="header" style="justify-content: space-between;">
+            <div>
+                <h1 style="margin:0; font-size:22px;">Hello, <span id="dash-name">Student</span>! 👋</h1>
+                <p style="margin: 3px 0 0; color: var(--muted); font-size: 12px;" id="dash-context">Grade 10 • Curriculum</p>
             </div>
-            <h3>My Subjects</h3>
-            <div class="subjects-grid">
-                <div class="subject-card" onclick="openTutor('Math')">📐 Math</div>
-                <div class="subject-card" onclick="openTutor('Physics')">🔭 Physics</div>
-                <div class="subject-card" onclick="openTutor('Chemistry')">🧪 Chemistry</div>
-                <div class="subject-card" onclick="openTutor('Biology')">🧬 Biology</div>
-                <div class="subject-card" onclick="openTutor('English')">🇬🇧 English</div>
-                <div class="subject-card" onclick="openTutor('History')">🏛️ History</div>
+            <div class="subject" style="width: auto; padding: 8px 12px;">
+                <span style="color: var(--blue); font-weight: bold;">Lvl <span id="dash-level">1</span></span>
             </div>
-        </div>
-
-        <!-- TUTOR SCREEN (Gemini Style) -->
-        <div id="tutor-screen" class="tab-content hidden">
-            <header class="gemini-header">
-                <button class="gemini-back" onclick="switchTab('dashboard-screen')">↩</button>
-                <div class="gemini-title">
-                    <span id="current-subject-title">Chemistry</span>
+        </header>
+        <main class="chat" style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="lesson-card" style="margin-top:0;">
+                <div class="lesson-heading">📊 DAILY GOAL PROGRESS</div>
+                <div style="height: 8px; background: #000; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                    <div id="dash-xp-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--blue), var(--purple));"></div>
                 </div>
-                <button class="gemini-menu-btn">⋮</button>
-            </header>
+            </div>
 
-            <main id="chat-container"></main>
-
-            <!-- Input Area -->
-            <footer class="gemini-footer">
-                <!-- Image Preview Area -->
-                <div id="preview-area" class="preview-area hidden">
-                    <div class="preview-chip">
-                        <img id="preview-img" src="" alt="Preview">
-                        <button onclick="clearPreview()">✕</button>
+            <div>
+                <div class="quick-title" style="padding-left:0; margin-bottom: 15px;">YOUR LEARNING SPACE</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="subject-card" onclick="openTutor('Math')">
+                        <div style="font-size: 24px; margin-bottom: 5px;">📐</div>
+                        <div style="font-size: 14px;">Math</div>
+                    </div>
+                    <div class="subject-card" onclick="openTutor('Physics')">
+                        <div style="font-size: 24px; margin-bottom: 5px;">🔭</div>
+                        <div style="font-size: 14px;">Physics</div>
+                    </div>
+                    <div class="subject-card" onclick="openTutor('Chemistry')">
+                        <div style="font-size: 24px; margin-bottom: 5px;">🧪</div>
+                        <div style="font-size: 14px;">Chemistry</div>
+                    </div>
+                    <div class="subject-card" onclick="openTutor('Biology')">
+                        <div style="font-size: 24px; margin-bottom: 5px;">🧬</div>
+                        <div style="font-size: 14px;">Biology</div>
+                    </div>
+                    <div class="subject-card" onclick="openTutor('English')">
+                        <div style="font-size: 24px; margin-bottom: 5px;">🇬🇧</div>
+                        <div style="font-size: 14px;">English</div>
+                    </div>
+                    <div class="subject-card" onclick="openTutor('History')">
+                        <div style="font-size: 24px; margin-bottom: 5px;">🏛️</div>
+                        <div style="font-size: 14px;">History</div>
                     </div>
                 </div>
-
-                <div class="gemini-input-wrapper">
-                    <button class="gemini-plus" onclick="toggleBottomSheet()">+</button>
-                    <input type="text" id="user-input" placeholder="Ask Edu..." autocomplete="off">
-                    <button class="gemini-mic">🎤</button>
-                    <button id="send-btn" class="gemini-send">➤</button>
-                </div>
-            </footer>
-            
-            <!-- HIDDEN INPUTS -->
-            <input type="file" id="camera-upload" accept="image/*" capture="environment" style="display:none;">
-            <input type="file" id="gallery-upload" accept="image/*" style="display:none;">
-            <input type="file" id="file-upload" accept=".txt,.pdf" style="display:none;">
-        </div>
-
-        <!-- PLANNER -->
-        <div id="planner-screen" class="tab-content hidden">
-            <header class="dash-header"><h2>Planner</h2></header>
-            <div class="placeholder-content"><p>📅 Coming Soon</p></div>
-        </div>
-
-        <!-- PROFILE -->
-        <div id="profile-screen" class="tab-content hidden">
-            <header class="dash-header"><h2>Profile</h2></header>
-            <div class="profile-card">
-                <p><strong>Name:</strong> <span id="prof-name"></span></p>
-                <p><strong>Grade:</strong> <span id="prof-grade"></span></p>
             </div>
-            <button class="danger-btn" onclick="resetApp()">Erase All Data</button>
-        </div>
-
-        <!-- BOTTOM NAV (Hidden in Tutor) -->
-        <nav id="main-nav" class="gemini-bottom-nav">
-            <button id="nav-home" class="nav-item active" onclick="switchTab('dashboard-screen')">🏠<span>Home</span></button>
-            <button id="nav-planner" class="nav-item" onclick="switchTab('planner-screen')">📅<span>Planner</span></button>
-            <button id="nav-profile" class="nav-item" onclick="switchTab('profile-screen')">⚙️<span>Profile</span></button>
+        </main>
+        <nav class="bottom-nav">
+            <button class="nav-button active" onclick="switchTab('dashboard-screen', this)">
+                <span class="nav-icon">⌂</span><span>Home</span>
+            </button>
+            <button class="nav-button" onclick="switchTab('tutor-screen', this)">
+                <span class="nav-icon">▢</span><span>Chat</span>
+            </button>
+            <button class="nav-button" onclick="switchTab('planner-screen', this)">
+                <span class="nav-icon">▦</span><span>Planner</span>
+            </button>
+            <button class="nav-button" onclick="switchTab('profile-screen', this)">
+                <span class="nav-icon">♙</span><span>Profile</span>
+            </button>
         </nav>
     </div>
 
-    <!-- BOTTOM SHEET MODAL (+ MENU) -->
-    <div id="bottom-sheet-overlay" class="sheet-overlay hidden" onclick="toggleBottomSheet()">
-        <div class="bottom-sheet" onclick="event.stopPropagation()">
-            <div class="sheet-handle"></div>
-            <div class="sheet-grid">
-                <button onclick="triggerUpload('camera-upload')"><span>📸</span> Camera</button>
-                <button onclick="triggerUpload('gallery-upload')"><span>🖼️</span> Gallery</button>
-                <button onclick="triggerUpload('file-upload')"><span>📎</span> Files</button>
-                <button id="think-harder-btn" onclick="toggleThinkHarder()"><span>🧠</span> Think</button>
-                <button onclick="handleQuickAction('quiz')"><span>📝</span> Quiz</button>
-                <button onclick="handleQuickAction('feynman')"><span>🧑‍🏫</span> Feynman</button>
+    <!-- TUTOR CHAT SCREEN -->
+    <div id="tutor-screen" class="screen hidden">
+        <header class="header">
+            <button class="circle-button" onclick="switchTab('dashboard-screen', document.querySelector('.nav-button'))" aria-label="Back">‹</button>
+            <div class="logo">✦</div>
+            <div class="brand">
+                <h1>AI <span>EduSchool</span></h1>
+                <p id="current-subject-title">Physics</p>
             </div>
-        </div>
+            <div class="subject" style="width: 100px;">
+                <label for="subject">SUBJECT</label>
+                <select id="subject">
+                    <option>Physics</option><option>Math</option><option>Chemistry</option>
+                    <option>Biology</option><option>English</option><option>History</option>
+                </select>
+            </div>
+            <button class="circle-button" onclick="showMore()">⋮</button>
+        </header>
+
+        <main class="chat" id="chat">
+            <!-- Chat messages render here -->
+        </main>
+
+        <div class="quick-title">WHAT WOULD YOU LIKE TO DO?</div>
+        <section class="quick-actions">
+            <button onclick="usePrompt('Explain this topic simply, step by step.')">💡 Explain</button>
+            <button onclick="usePrompt('Give me a worked example.')">▤ Example</button>
+            <button onclick="usePrompt('Give me three practice questions.')">⊙ Practice</button>
+            <button onclick="usePrompt('Create short revision notes.')">▣ Notes</button>
+        </section>
+
+        <form class="composer" id="chatForm">
+            <button class="add-button" type="button" onclick="document.getElementById('imageInput').click()" aria-label="Attach image">＋</button>
+            <input type="file" id="imageInput" accept="image/*" hidden>
+            <textarea id="messageInput" rows="1" placeholder="Ask EduSchool..." aria-label="Type your question"></textarea>
+            <button type="button" class="tool-button" onclick="startVoice()">🎙</button>
+            <button type="submit" class="send-button" aria-label="Send message">➤</button>
+        </form>
+        <div class="attachment" id="attachment" hidden></div>
     </div>
 
-    <script src="config.js"></script>
-    <script src="app.js"></script>
+    <!-- PLACEHOLDER SCREENS -->
+    <div id="planner-screen" class="screen hidden">
+        <header class="header"><h1>Planner</h1></header>
+        <main class="chat"><p>Planner coming soon...</p></main>
+    </div>
+    <div id="profile-screen" class="screen hidden">
+        <header class="header"><h1>Profile</h1></header>
+        <main class="chat">
+            <p><strong>Name:</strong> <span id="prof-name"></span></p>
+            <p><strong>Grade:</strong> <span id="prof-grade"></span></p>
+            <button class="circle-button" style="width:100%; border-radius:10px; margin-top:20px; background:#ef4444;" onclick="resetApp()">Erase Data</button>
+        </main>
+    </div>
+</div>
+
+<!-- ONBOARDING OVERLAY -->
+<div id="onboarding-screen" class="app" style="position:fixed; inset:0; z-index:100; background: var(--bg); padding: 20px;">
+    <h1 style="color:var(--blue); text-align:center; margin-top:50px;">Welcome to AI EduSchool</h1>
+    <p style="text-align:center; color:var(--muted); margin-bottom:30px;">Let's build your personalized path.</p>
+    <label>What is your name?</label>
+    <input type="text" id="onboard-name" placeholder="Enter your name" style="width:100%; padding:15px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:white; margin-bottom:15px; outline:none;">
+    <label>What grade are you in?</label>
+    <select id="onboard-grade" style="width:100%; padding:15px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:white; margin-bottom:15px; outline:none;">
+        <option value="9">Grade 9</option><option value="10">Grade 10</option><option value="11">Grade 11</option><option value="12">Grade 12</option>
+    </select>
+    <label>Select your Curriculum:</label>
+    <select id="onboard-curriculum" style="width:100%; padding:15px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:white; margin-bottom:30px; outline:none;">
+        <option value="Ethiopian National Curriculum">Ethiopian National Curriculum</option>
+        <option value="International (IGCSE/IB)">International (IGCSE/IB)</option>
+    </select>
+    <button class="send-button" style="width:100%; border-radius:12px; height:50px; font-size:16px;" onclick="finishOnboarding()">Create My School</button>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
