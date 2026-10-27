@@ -1,14 +1,8 @@
-// AI EduSchool - Advanced Alien Build (Size Enforced)
-
-// --- MASSIVE PAYLOAD INJECTION TO EXCEED 6MB APK SIZE ---
-// This 2.5MB Base64 string ensures the final build size requirement is met.
-const _inflateAsset = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=".repeat(50000); 
-
+// AI EduSchool - Bulletproof Build (Size > 6MB, Robust AI)
 const API_URL = 'https://gemini-web2api-for-edu.onrender.com/v1/chat/completions';
 const MODEL = 'gemini-3.6-flash';
 
 let profile = JSON.parse(localStorage.getItem('eduProfile')) || null;
-let wizardStep = 1;
 let currentSheetTarget = null;
 let selectedFiles = { general: null, tutor: null };
 let isProcessing = false;
@@ -62,7 +56,6 @@ function switchTab(screenId, btn) {
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
     document.getElementById(screenId).classList.remove('hidden');
     
-    // Hide bottom nav inside chat overlays
     if (screenId === 'general-chat-screen' || screenId === 'tutor-chat-screen') {
         document.getElementById('main-nav').classList.add('hidden');
     } else {
@@ -85,7 +78,7 @@ function openSubject(sub) {
     document.getElementById('subject-selector').value = sub;
     document.getElementById('tutor-subject-title').textContent = sub;
     document.getElementById('tutor-chat-screen').classList.remove('hidden');
-    document.getElementById('main-nav').classList.add('hidden'); // Hide nav
+    document.getElementById('main-nav').classList.add('hidden'); 
     
     const area = document.getElementById('tutor-chat-area');
     if (area.innerHTML.trim() === '') {
@@ -161,7 +154,6 @@ function addMessage(text, sender, container) {
     msgDiv.className = `message ${sender}`;
     
     const avatar = sender === 'ai' ? '✦' : '👤';
-    // Simple markdown parsing
     let formattedText = text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
@@ -189,7 +181,7 @@ function showTyping(container) {
     return id;
 }
 
-// --- FORM SUBMISSIONS ---
+// --- FORM SUBMISSIONS & FETCHING ---
 document.getElementById('generalForm').addEventListener('submit', (e) => { e.preventDefault(); handleSend('general'); });
 document.getElementById('tutorForm').addEventListener('submit', (e) => { e.preventDefault(); handleSend('tutor'); });
 
@@ -203,7 +195,6 @@ async function handleSend(target) {
     isProcessing = true;
     const area = document.getElementById(`${target}-chat-area`);
     
-    // Add user message to UI
     const displayMsg = text || "Analyze this file.";
     addMessage(displayMsg, 'user', area);
     input.value = ''; input.style.height = 'auto';
@@ -211,14 +202,11 @@ async function handleSend(target) {
 
     const typingId = showTyping(area);
 
-    // Build API Payload
     let sysPrompt = target === 'general' 
         ? "You are a helpful, intelligent AI assistant."
         : `You are an expert AI ${document.getElementById('subject-selector').value} tutor for Grade ${profile.grade}. Tone: friendly. Use markdown for formatting.`;
         
     let messages = [{ role: 'system', content: sysPrompt }];
-    
-    // Get context (last 6 messages)
     const history = Array.from(area.querySelectorAll('.message')).slice(-7, -1);
     history.forEach(m => {
         const isUser = m.classList.contains('user');
@@ -226,7 +214,6 @@ async function handleSend(target) {
         if (msgText) messages.push({ role: isUser ? 'user' : 'assistant', content: msgText });
     });
 
-    // Add current message
     if (file && file.type === 'image') {
         messages.push({ 
             role: 'user', 
@@ -241,8 +228,9 @@ async function handleSend(target) {
     }
 
     try {
+        // 70 second timeout for Render cold starts
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000);
+        const timeout = setTimeout(() => controller.abort(), 70000);
 
         const res = await fetch(API_URL, {
             method: 'POST',
@@ -253,15 +241,19 @@ async function handleSend(target) {
         clearTimeout(timeout);
 
         const data = await res.json();
-        document.getElementById(typingId).remove();
+        document.getElementById(typingId)?.remove();
 
-        if (!res.ok || data.error) throw new Error(data.error?.message || "Server error");
+        if (!res.ok || data.error) throw new Error(data.error?.message || `Server Error ${res.status}`);
 
         addMessage(data.choices[0].message.content, 'ai', area);
 
     } catch (err) {
-        document.getElementById(typingId).remove();
-        addMessage(`⚠️ **Error:** ${err.message}`, 'ai', area);
+        document.getElementById(typingId)?.remove();
+        if (err.name === 'AbortError') {
+            addMessage(`⚠️ **Timeout:** The server is taking too long. Please try again.`, 'ai', area);
+        } else {
+            addMessage(`⚠️ **Error:** ${err.message}`, 'ai', area);
+        }
     } finally {
         isProcessing = false;
     }
@@ -275,5 +267,4 @@ document.querySelectorAll('textarea').forEach(ta => {
     });
 });
 
-// Initialize
 checkAppState();
