@@ -230,39 +230,25 @@ async function handleSend(target) {
 
 // --- PHASE 2: EXAM CENTER LOGIC ---
 async function startExamSetup() {
-    const subject = prompt("Which subject do you want to be tested on? (Physics, Math, Chemistry, Biology)", "Physics");
+    const subject = prompt("Which subject? (Physics, Math, Chemistry, Biology)", "Physics");
     if (!subject) return;
-    
     const area = document.getElementById('exam-content');
-    area.innerHTML = '<div style="text-align:center; color:var(--blue); margin-top:50px;">Generating 10 questions for Grade ' + profile.grade + ' ' + subject + '... Please wait.</div>';
+    area.innerHTML = '<div style="text-align:center; color:var(--blue); margin-top:50px;">Generating exam... Please wait.</div>';
     document.getElementById('exam-screen').classList.remove('hidden');
     document.getElementById('main-nav').classList.add('hidden');
     document.getElementById('exam-subject-title').textContent = subject + " Exam";
 
-    // AI Prompt to generate 10 MCQs in strict JSON format
-    const sysPrompt = `You are an examiner. Generate exactly 10 multiple-choice questions for Grade ${profile.grade} ${subject}. 
-    Return ONLY a JSON array. DO NOT wrap it in markdown code blocks. 
-    Format: [{"q": "Question text", "options": {"A": "Opt 1", "B": "Opt 2", "C": "Opt 3", "D": "Opt 4"}, "answer": "A", "explanation": "Why A is correct"}]
-    Make the questions challenging and relevant to the curriculum.`;
+    const sysPrompt = `You are an examiner. Generate exactly 10 multiple-choice questions for Grade ${profile.grade} ${subject}. Return ONLY a valid JSON array. Do NOT include markdown code blocks. Format: [{"q": "Question", "options": {"A": "1", "B": "2", "C": "3", "D": "4"}, "answer": "A", "explanation": "Why"}]`;
 
     try {
-        const res = await fetchWithFallback([{ role: 'system', content: sysPrompt }, { role: 'user', content: "Generate the exam JSON." }]);
-        
-        // Robust JSON parsing (extract everything between [ and ])
+        const res = await fetchWithFallback([{ role: 'system', content: sysPrompt }, { role: 'user', content: "Generate the exam JSON." }], 4000);
         const jsonStr = res.substring(res.indexOf('['), res.lastIndexOf(']') + 1);
         examQuestions = JSON.parse(jsonStr);
-
-        if (!examQuestions || examQuestions.length === 0) throw new Error("Failed to parse questions.");
-
-        currentQuestionIndex = 0;
-        examAnswers = {};
-        timeLeft = 900; // 15 mins
-
-        renderExamQuestion();
-        startExamTimer();
-
+        if (!examQuestions || examQuestions.length === 0) throw new Error("Failed to parse.");
+        currentQuestionIndex = 0; examAnswers = {}; timeLeft = 900;
+        renderExamQuestion(); startExamTimer();
     } catch (err) {
-        alert("Error generating exam: " + err.message);
+        alert("Error generating exam. The AI response was incomplete. Please try again.");
         closeExam();
     }
 }
@@ -380,23 +366,21 @@ function closeExam() {
 }
 
 // --- SMART FALLBACK ENGINE ---
-async function fetchWithFallback(messages) {
+async function fetchWithFallback(messages, maxTokens = 2000) {
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 60000); 
-        const res = await fetch(GEMINI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: GEMINI_MODEL, messages, temperature: 0.7 }), signal: controller.signal });
+        const res = await fetch(GEMINI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: GEMINI_MODEL, messages, temperature: 0.7, max_tokens: maxTokens }), signal: controller.signal });
         clearTimeout(timeout);
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.error?.message || `Gemini Error`);
         return data.choices[0].message.content;
     } catch (geminiError) {
-        console.warn("Gemini Failed. Using Groq...", geminiError);
         const groqKey = window.APP_CONFIG?.GROQ_API_KEY;
         if (!groqKey) throw new Error("Primary server failed and no Groq API key found.");
-
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30000); 
-        const res = await fetch(GROQ_URL, { method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: GROQ_MODEL, messages, temperature: 0.7 }), signal: controller.signal });
+        const res = await fetch(GROQ_URL, { method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: GROQ_MODEL, messages, temperature: 0.7, max_tokens: maxTokens }), signal: controller.signal });
         clearTimeout(timeout);
         if (!res.ok) throw new Error(`Fallback API Error ${res.status}`);
         const data = await res.json();
